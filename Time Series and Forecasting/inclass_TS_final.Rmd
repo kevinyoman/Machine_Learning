@@ -1,0 +1,1547 @@
+---
+title: 'Time Series : In-class materials'
+author: "Team Algoritma"
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+output:
+  html_document:
+    df_print: paged
+    highlight: tango
+    theme: cosmo
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+  word_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+
+```{r setup, include=FALSE}
+# clear-up the environment
+rm(list = ls())
+
+# chunk options
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  comment = "#>"
+)
+
+# prevent scientific notation
+options(scipen = 100)
+
+# load library
+library(tidyverse) #data manipulation
+library(lubridate) # date manipulation
+library(padr) # TS padding
+library(zoo) # imputasi missing value TS
+library(fpp) # TS dataset
+
+library(forecast) # time series library
+library(TTR) # SMA function
+library(tseries) # adf.test
+library(MLmetrics) # calculate error
+
+# supaya semua plot memiliki theme_minimal()
+theme_set(theme_minimal())
+```
+
+# Introduction
+
+```{r, echo=FALSE}
+knitr::include_graphics("assets/Time Series Forecasting.png")
+```
+
+1. Time series data: merupakan data yang berhubungan dengan waktu yang memiliki interval waktu yang sama
+
+2. Forecasting: merupakan suatu metode untuk memprediksi/meramalkan data di masa depan
+
+**Apa perbedaan Time Series dengan Regresi?**
+
+Perbedaan mendasar antara time series dengan regresi adalah jika pada regresi untuk memprediksi suatu nilai Y dipengaruhi oleh beberapa faktor yaitu x1,x2,..,xn. Sedangkan jika **time series**, untuk memprediksi suatu nilai Y dipengaruhi oleh nilai Y itu sendiri pada masa lampau ($Y_{t-1}$). 
+
+
+*Regression*
+
+$$y = \beta_0+\beta_1*x_1+\beta_2*x_2+...+\beta_n*x_n$$
+
+*Time Series*
+
+$$y_t = \beta_0+\beta_1*y_{t-1}+\beta_2*y_{t-2}+...+\beta_n*y_{t-n}$$
+# Time Series Data
+
+## Objek Time Series
+
+Untuk analisis time series di R, kita perlu convert data kita menjadi **objek ts**. Menggunakan fungsi `ts()`. Berikut parameter fungsinya:
+
+> ts(data, start, frequency)
+
+* `data`  = variabel yang ingin diamati (target)
+* `start` = periode awal data (optional)
+* `frequency` = pola berulang dari data
+
+Cara menentukan frequency: 
+
+1. cek data direkam per satuan waktu apa?
+2. pola yang ingin dilihat per satuan waktu apa?
+3. frekuensi = berapa data dalam 1 musim/seasonal
+
+Contoh:
+- Jika saya memiliki data harian dan ingin mendapatkan pola mingguan, maka frequency = 7
+- Jika saya memiliki data harian dan ingin mendapatkan pola bulanan, maka frequency = 7*4
+
+```{r out.width="60%", fig.align='center', echo=FALSE}
+knitr::include_graphics("assets/ts_freq.png")
+```
+
+**Dive deeper :**
+
+Tentukan frequency dari data time series berikut:
+
+* Sebuah cafe mencatat total pengunjung yang datang per jam, apabila ingin dilihat pola harian, maka:
+  - Dengan asumsi buka 24 jam, maka frequency = 24
+  - Dengan asumsi hanya buka 12 jam, maka frequency = 12
+
+* Sebuah perusahaan retail mencatat total sales per bulan, maka apabila:
+  - ingin dilihat pola sales tahunan, maka frequency = 12
+  - ingin dilihat pola sales kuartalan, maka frequency = 3
+  
+* Lihatlah visualisasi time series di bawah. Algoritma mencatat jumlah pendaftar Academy pada periode waktu tertentu dan ingin dipertimbangkan pola tahunan, maka frequency = ...
+
+```{r out.width="60%", fig.align='center', echo=FALSE}
+knitr::include_graphics("assets/ts_freq_algoritma.png")
+```
+
+Sekarang, mari coba membuat objek ts. Berikut adalah data emisi gas Indonesia sejak tahun 1970 hingga 2012 per tahunnya.
+
+```{r}
+# read data
+library(janitor)
+co2 <- read.csv("data_input/environment_1970f.csv") %>% 
+  clean_names()
+head(co2)
+```
+
+Buatlah objek time series dari *Carbon Dioxide (CO2) Emission Metric Tons per Capita* dengan seasonality tahunan (per 1 tahun):
+
+```{r}
+# simpan dalam object ts
+gas_ts <- ts(data = co2$co2_emissions_metric_tons_per_capita,
+             start = 1970, # awal periode: opsional
+             freq = 1) # data tahunan, ingin mengamati pola tahunan
+  
+gas_ts
+```
+
+Cek class dari data `gas_ts`
+```{r}
+# class ts object
+class(gas_ts)
+```
+
+Buat visualisasinya dengan fungsi `autoplot()`:
+
+```{r}
+# inspect pola data
+gas_ts %>% 
+  autoplot() + 
+  geom_point()
+```
+
+Untuk visual yang lebih jelas di rentang waktu tertentu, kita bisa gunakan `window()`:
+
+```{r}
+gas_ts %>% 
+  window(start = 1990, end = 2010) %>% 
+  autoplot() + 
+  geom_point()
+```
+
+Insight:
+
+- Secara general, gas emisi CO2 di Indonesia semakin lama semakin meningkat
+- Pada  tahun 1997, terjadi peningkatan gas emisi CO2 yang cukup signifikan.[Kebaran Hutan di Tahun 1997](https://id.wikipedia.org/wiki/Kebakaran_hutan_Indonesia_1997)
+- Pada tahun 1998, ada penurunan terjadi karena krismon (krisis moneter), bisa jadi banyak pabrik tutup sehingga emisi gas CO2 berkurang di waktu tersebut. 
+
+## Syarat Data Time Series
+
+**1. Data harus terurut berdasarkan waktu (lampau ke baru)**
+
+```{r}
+dat <- data.frame(year = c(2010,2012,2011,2013,2014), value = c(10,15,12,17,16))
+dat
+```
+
+```{r}
+# mengurutkan berdasarkan year
+dat %>% 
+  arrange(year)
+```
+
+**2. Tidak boleh ada waktu yang bolong**
+
+```{r}
+dat <- data.frame(date = as.Date(c("2020-02-01","2020-02-03","2020-02-04")),
+                                 value = c(23,34,20))
+dat
+```
+
+```{r}
+library(padr)
+dat <- dat %>% 
+  pad()
+```
+
+3. **Tidak boleh ada NA**
+
+Cara yang umum dilakukan dengan package `zoo`:
+
+a. `na.fill()`: mengisi `NA` dengan sebuah nilai, Gunakan `fill="extend"` untuk mengisi dengan nilai rata-rata dengan nilai yang missing 
+b. `na.aggregate()`: nilai aggregasi (mean, median)
+c. `na.locf()`: nilai terakhir sebelum missing
+
+```{r}
+library(zoo)
+# impute pakai "extend"
+dat %>% 
+  mutate(value = na.fill(value, "extend"))
+
+# impute dengan data sebelum missing
+dat %>% 
+  mutate(value = na.locf(na.locf(value)))
+
+# impute dengan data setelah missing
+dat %>% 
+  fill(value, .direction = c('up'))
+
+# impute pakai nilai 0
+dat %>% 
+  mutate(value = na.fill(value, 0))
+```
+
+Note: Referensi Pre-processing Data Time Series dapat ditemukan [disini](https://askalgo.netlify.app/#data-preprocessing)
+
+**Dive Deeper!**
+
+1. Read data `nybirth.csv` 
+
+```{r}
+birth <- read.csv("data_input/nybirth.csv")
+head(birth, 20)
+```
+
+Data `births` merupakan data persentase kelahiran di New York per bulan. Terdiri dari:
+
+- `date`: tanggal saat dilakukan pencatatan persentase kelahiran
+- `births`: persentase tingkat kelahiran.
+
+Cek class data birth
+
+```{r}
+class(birth)
+```
+
+2. Lakukan data preprocessing:
+
+```{r}
+# menyesuaikan tipe data `date`
+birth <- birth %>% 
+  mutate(date = ymd(date))
+```
+
+3. Mengetahui range atau periode waktu data `birth`
+
+```{r}
+range(birth$date)
+```
+
+4. Cek apakah data sudah memenuhi syarat data time series yang baik?
+
+- data harus urut
+- interval tetap 
+- tidak ada missing value
+
+```{r}
+birth %>% 
+  arrange() %>% # memastikan data terurut
+  pad("month") %>% # memastikan tidak ada data yg terlewati
+  anyNA() # cek adakah missing value
+```
+
+5. Membuat object time series. Pola yang ingin dilihat adalah pola tahunan.
+
+```{r}
+birth_ts <- ts(data  = birth$births,
+               start = c(1946, 1),
+               freq = 12) 
+```
+
+6. Lihatlah visualisasi object `birth_ts`
+```{r}
+birth_ts %>% 
+  autoplot() #+
+  #geom_point()
+```
+Fungsi utama decompose, yaitu mendapatkan insight dari trend dan seasonality:
+
+> Insight:
+- Trend: di awal turun, namun lambat laun makin naik. Kemungkinan besar terjadi karena efek berakhirnya Perang Dunia kedua, atau sering kita kenal sebagai Generasi Baby Boomer (generasi lahir pada tahun 1946 - 1964)
+- Ada pola berulang dari data, agar lebih mudah interpretasi maka bisa di zoom in untuk melihat pergerakan setiap bulannya
+
+```{r}
+# ambil 2 tahun data untuk lihat kondisi seasonal
+birth_ts %>% 
+  window(start = 1948, end = 1950) %>% 
+  autoplot() +
+  geom_point()
+```
+> Insight:
+Seasonality: Bulan Februari tingkat kelahiran rendah, July tingkat kelahiran tinggi dibandingkan bulan-bulan lainnya.
+
+**Summary Day 1**
+
+1. Time series adalah suatu data yang berhubungan dengan runtun waktu.
+2. Analisis time series adalah analisis data runtun waktu dimana yang akan kita prediksi adalah data time series itu sendiri dengan data historicalnya.
+3. Syarat data time series:
+   - terurut berdasarkan waktu (lampau -> terbaru)
+   - tidak ada waktu yang bolong (bila bolong dilengkapi dengan `pad()`)
+   - tidak ada NA (bila NA, dilengkapi dengan imputasi NA, bisa dengan `na.fill()`)
+4. Untuk membuat object time series dapat menggunakan fungsi `ts(data, start, frequency)`
+
+* `data` : data yang ingin di forecast
+* `start` : awal mula dari data time series
+* `frequency` : pola berulang yang ingin diamati
+
+5.EDA objek time series:
+  + `autoplot(objek_ts)`: memplotkan data secara umum
+    - cek ada trend/tidak
+    - cek ada seasonal/tidak
+
+-----End of day 1----------
+
+# Decomposition
+
+**Decomposition** adalah suatu tahapan dalam time series analisis yang digunakan untuk menguraikan beberapa komponen dalam time series data. 
+
+Komponen/unsur dalam time series :
+
+- **Trend** : pola data secara general, cenderung naik atau turun
+- **Seasonal** : pola yang berulang pada periode waktu yang tetap/sama
+- **Residual/Error** : pola yang tidak dapat ditangkap dalam trend dan seasonal
+
+Untuk dapat menguraikan object time series kita menjadi 3 komponen tersebut, kita dapat menggunakan fungsi `decompose()`.
+
+```{r}
+birth_dc <- decompose(birth_ts)
+```
+
+Visualisasi hasil decompose:
+
+```{r}
+birth_dc %>% 
+  autoplot()
+```
+
+Insight:
+
+* trend cukup smooth, terlihat sedikit penurunan di awal dan kemudian naik -> **sudah baik**
+* seasonal tertangkap
+* error tertangkap
+
+**note:**
+
+* bila trend masih fluktuatif:
+  + frequency belum tepat (ada pola seasonal yang belum tertangkap) -> ganti frequency
+  + ada multiseasonality (pola seasonal > 1, misal harian & mingguan) -> ganti frequency
+* kita juga bisa manfaatkan hasil decompose untuk melakukan **seasonality analysis**(kapan nilai tinggi/rendah)
+
+Pada hasil decompose kita mendapatkan informasi visualisasi:
+
+1. Data : pola data asli
+2. Trend (T) : pola data secara global (naik atau turun)
+3. Seasonal (S) : pola musiman atau pola berulang dari data
+4. Remainder (E) : pola data yang tidak dapat ditangkap oleh seasonal dan trend
+
+**Additive and Multiplicative**
+
+Terdapat 2 jenis model pada data time series, yaitu :
+
+```{r out.width="60%", fig.align='center', echo=FALSE}
+knitr::include_graphics("assets/aditif vs multiplikatif.png")
+```
+
+1. **Additive**: Pola trend dan seasonal nya cenderung konstan.
+
+$$Y_t = T_t + S_t + E_t$$
+
+2. **Multiplicative**: Pola trend dan seasonal nya cenderung meningkat.
+
+$$X_t = T_t * S_t * E_t$$
+* Berikut ini contoh data time series yang bertipe additive :
+```{r}
+birth_ts %>% 
+  autoplot()
+```
+
+* Berikut ini contoh data time series yang bertipe multiplicative :
+```{r}
+AirPassengers %>% 
+  autoplot()
+```
+
+Ketika kita menemukan pola data kita mengandung multiplikative :
+
+> cara 1: membuat data multiplikative tersebut menjadi additive dengan fungsi `log`. Setelah memperoleh hasil forecast kita dapat mengembalikan nilainya dengan `exp`.
+
+```{r}
+# menggunakan AirPassenger
+
+AirPassengers %>% autoplot()
+
+log(AirPassengers) %>% autoplot()
+
+decompose(log(AirPassengers)) %>% autoplot()
+
+```
+
+> cara 2: Tetap menggunakan model multiplikatif, kemudian nanti hasil dibandingkan dengan memilih model error yang paling kecil.
+
+```{r}
+# menggunakan AirPassenger
+air_dc <- decompose(AirPassengers)
+
+decompose(AirPassengers, type = "multiplicative") %>% autoplot()
+```
+
+**Mathematical Breakdown**
+
+**Additive**
+
+Formula: $X_t = T_t + S_t + E_t$
+
+**1. Trend**
+
+trend diperoleh dari hasil perhintungan `center moving average (CMA)`. Tujuan utamanya untuk **smoothing data** sehingga diperoleh trend yang cenderung naik/ cenderung turun.
+
+```{r}
+# data original
+autoplot(birth_ts)
+```
+
+```{r}
+# hasil informasi trend dari fungsi `decompose`
+birth_dc$trend %>% 
+  autoplot()
+```
+
+**Pendekatan manual menggunakan Center Moving Average**
+
+```{r}
+birth_trend <- ma(birth_ts, order = 12, # sesuai frequency
+                  centre = T) # agar dihitung menggunakan center moving average
+ 
+birth_trend %>% autoplot() + theme_minimal()
+```
+
+**2. Seasonality** 
+
+```{r}
+# hasil pola seasonal dari proses decompose
+birth_dc$seasonal %>% 
+  autoplot()
+```
+
+**Pendekatan manual**:
+
+Formula Additive: `Data = Trend + Seasonal + Error`
+
+Untuk mencari seasonal kita bisa buang trend terlebih dahulu. 
+
+```{r}
+# Detrend time series
+birth_seas_er <- birth_ts - birth_trend
+
+autoplot(birth_seas_er)
+```
+
+```{r}
+# mean of each month
+mean_month_birth <- birth_seas_er %>% 
+  matrix(ncol = 12, byrow = T) %>% # ubah menjadi matrix 12 kolom (bulan)
+  colMeans(na.rm = T) # hitung rata-rata per bulan
+
+# mean global
+mean_glob_birth <- mean(mean_month_birth) # adjusting seasonal
+
+# seasonality calculation
+seas_birth <- mean_month_birth - mean_glob_birth
+
+# make it repetitive just like time series data
+birth_seasonal <- ts(data = rep(seas_birth, 14), # for 14 years 
+                     start = start(birth_ts), 
+                     frequency = 12)
+
+# plot it
+birth_seasonal %>% autoplot() + theme_minimal()
+```
+
+**3. Error**
+
+Untuk memperoleh informasi error, dapat menggunakan rumus:
+
+*Error = Data - Trend - Seasonal*
+
+```{r}
+# hasil informasi error dari fungsi `decompose`
+birth_dc$random %>%
+  autoplot()
+```
+
+**Pendekatan manual**:
+
+```{r}
+birth_error <- birth_ts - birth_trend - birth_seasonal
+
+birth_error %>% autoplot()
+```
+
+**Recomposed Time Series Additive Model**:
+
+$$X_t = T_t + S_t + E_t$$
+
+```{r}
+birth_recomp <- birth_trend + birth_seasonal + birth_error
+
+autoplot(birth_recomp) + theme_minimal()
+```
+
+**Multiplicative**
+
+Penentuan trend, seasonal dan error pada data berpola Multiplicative masih sama, namun menggunakan formula:
+
+$$X_t = T_t * S_t * E_t$$
+
+### Seasonality Analysis
+
+Seasonality analysis membantu kita mengetahui di waktu mana saja yang nilai datanya tinggi/rendah pada periode seasonal yang kita amati. 
+
+Misalnya, dari objek `birth_ts` (seasonality tahunan) kita ingin mengetahui, bulan apa saja yang tingkat kelahirannya tinggi?
+
+```{r}
+seas_data <- birth %>% 
+  mutate(seasonal = birth_dc$seasonal, # simpan seasonal hasil decompose
+         month = month(ymd(date), label = T, abbr = T)) %>% # ambil informasi bulan
+  distinct(month, seasonal) # ambil unique dari tiap bulan & seasonal
+
+seas_data
+```
+
+```{r}
+# ploting
+seas_data %>% 
+  ggplot(mapping = aes(x = month, y = seasonal)) +
+  geom_col() + 
+  theme_minimal()
+```
+
+> Insight: 
+* persentase tingkat kelahiran paling tinggi di juli
+* persentase tingkat kelahiran paling rendah di februari
+
+### Seasonality Adjustment
+
+Seasonality Adjustment adalah data time series yang sudah dibuang efek seasonal nya. Umumnya digunakan untuk lebih mudah mendeteksi error/kejadian luar biasa/anomali dari data (tidak terganggu efek seasonal). 
+
+Berikut contoh data `birth_ts` dan `AirPassanger` yang sudah dibuang efek seasonalnya:
+
+```{r}
+library(xts)
+
+# birth_ts
+as.xts(birth_dc$x - birth_dc$seasonal) %>% 
+  autoplot() %>% 
+  plotly::ggplotly()
+```
+
+> Insight: April 1955, Juni 1959, Juni 1947 terjadi penurunan tingkat kelahiran dari data pada umumnya. Titik-titik data ini dapat dicatat untuk analisis lebih lanjut.
+
+# Forecasting Model
+
+**Forecasting Model:**
+
+1. Simple Moving Average (SMA)
+2. Exponential Smoothing 
+   - Simple Exponential Smoothing (SES) 
+   - Double Exponential Smoothing (Holts Exponential Smoothing)
+   - Triple Exponential Smoothing (Holts Winter)
+3. Autoregresive Integrated Moving Average (ARIMA)
+
+## Simple Moving Average (SMA)
+
+* SMA hanya melakukan kalkulasi **mean** dari `n` data sebelumnya.
+* Pembobotan tiap data (data baru vs data lampau) sama
+
+> SMA tepat digunakan ketika data yang kita miliki tidak memiliki trend maupun seasonal.
+
+Fungsi yang digunakan untuk forecasting SMA adalah `SMA(objek time series, n)` dari library `TTR`. Parameter yang digunakan, yaitu: 
+
+- `x` :objek time series yang akan di forecast
+- `n`: jumlah observasi di masa lalu yang digunakan untuk forecasting
+
+Kita akan coba melakukan forecasting pada data curah hujan tahunan sejak 1813-1912 yang tersimpan pada folder data_input dengan nama file `precip1.dat`. 
+
+* read data menggunakan `scan()`
+```{r}
+# read data rain
+rain <- scan("data_input/precip1.dat", skip = 1)
+head(rain)
+```
+
+* membuat object ts
+```{r}
+rain_ts <- ts(data = rain, freq = 1)
+  
+```
+
+* visualisasikan data
+```{r}
+rain_ts %>% 
+  autoplot()
+```
+
+>  Insight: Data curah hujan bergerak di sekitar nilai rata-rata (tidak ada trend dan seasonal)
+
+* melakukan forecasting menggunakan `SMA()` dengan ordo 3
+```{r}
+model_sma_3 <-SMA(x = rain_ts, n = 3)
+
+model_sma_12 <-SMA(x = rain_ts, n = 12)
+```
+
+Memvisualisasikan data historis dengan hasil forecast
+```{r}
+rain_ts %>% 
+  autoplot() +
+  autolayer(model_sma_3) +
+  autolayer(model_sma_12)
+```
+
+> Insight: Berdasarkan 2 model SMA yang sudah dibangun dengan ordo 3 dan ordo 12, belum ada model yang  berhasil menangkap dengan baik pola data. Kalau secara visual diperhatikan:
+- model SMA 3 pola datanya sudah dengan baik mengikuti pola data, namun pola yang terbentuk sedikit lambat dibandingkan pola data asli 
+- model SMA 12 kalau diperhatikan terlalu smooth, sehingga pola naik turun tidak tertangkap dengan baik.
+
+> Langkah lanjutan
+- Bisa dilakukan evaluasi model dengan melihat nilai error antara ke-2 model
+- Kalau error masih tinggi, bisa coba dituning kembali dengan ubah nilai ordo.
+- Kalau tuning masih belum berhasil maka bisa dilakukan penambahan data/ganti model
+
+Highlight pada SMA: 
+* jumlah n kita yg tentukan
+* semakin banyak n semakin smooth pola hasil prediksinya
+* penentuan jumlah n (ordo): analisis trade off
+  + terlalu detail: takutnya efek random error itu lebih berpengaruh
+  + terlalu smooth: takutnya tidak bisa mengambil pola yang diinginkan
+  + umumnya baseline model: pakai jumlah frekuensi (note: kalau freq != 1)
+
+## Exponential Smoothing
+
+Exponential Smoothing menganggap **data yang baru memiliki bobot yang lebih besar dibandingkan data yang lampau**. Metode Exponential Smoothing terbagi menjadi 3:
+
+1. **Simple Exponential Smoothing**
+  * smoothing error
+  * cocok untuk data yang **tanpa trend** & **tanpa seasonal** [^1]
+2. **Double Exponential Smoothing (Holt)**
+  * smoothing error & trend
+  * cocok untuk data yang **ada trend** & **tanpa seasonal** [^2]
+3. **Triple Exponential Smoothing (Holt Winters)**
+  * smoothing error, trend, seasonal
+  * cocok untuk data yang **ada trend** & **ada seasonal** [^3]
+
+Smoothing dilakukan dengan menghitung rata-rata `n` nilai sebelumnya, dimana nilai sebelumnya sudah dikalikan dengan koefisien smoothing (pembobotan):
+
+  * Error: *alpha*
+  * Trend: *beta*
+  * Seasonal: *gamma*
+
+Range nilai alpha, beta, maupun gamma berkisar dari **0 - 1**:
+
+* mendekati 1: semakin mempertimbangkan data baru (bobotnya tinggi) dan mengabaikan data lampau.
+* mendekati 0: data baru dan lampau memiliki bobot yg sama.
+
+Reference: https://otexts.com/fpp2/ses.html
+
+**CHEATSHEET**
+
+Untuk membuat model Exponential Smoothing ada 2 opsi function:
+
+1. `ets()` : Exponential smoothing
+  * `y` = objek time series
+  * `model` = terdiri dari 3 huruf (karakteristik error (E), trend (T), dan seasonal (S)) 
+    * A: Additive
+    * M: Multiplicative
+    * N: None
+    * Z: Auto
+  * `aplha`, `beta`, `gamma` = koefisien bisa diatur manual / dibiarkan otomatis
+  
+2. `HoltWinters()`: 
+  * `x` = objek time series
+  * `alpha` = smoothing error
+  * `beta` = smoothing trend
+  * `gamma` = smoothing seasonal
+  * alpha beta gamma bisa diatur manual / dibiarkan otomatis / ditidadakan `F/False`
+  * `seasonal`: tipe seasonal additive (default) / multiplicative
+  
+**Dive Deeper!**
+
+1. Data: error ada, trend tidak ada, seasonal tidak ada
+  * ets: `ets(data, model = "ZNN")` 
+  * holt winters: `HoltWinters(data, beta = F, gamma = F)`
+  
+2. Data: error ada, trend ada, seasonal tidak ada 
+  * ets: `ets(data, model = "ZZN")`
+  * holt winter: `HoltWinters(data, gamma = F)`
+
+3. Data: error ada, trend ada, seasonal ada (multiplicative)
+  * `ets(data, model = "ZZM")`
+  * `HoltWinters(data, seasonal = "multiplicative")`
+
+**Note**: secara default parameter `alpha`, `beta`, dan `gamma` adalah **NULL**, dimana apabila kita tidak mendefinisikan nilainya, maka model `HolWinters()` akan mencari nilai parameternya hingga mendapatkan nilai paling optimum. Sehingga jika objek time series tidak mengandung trend dan seasonal parameter `beta` dan `gamma` harus diubah menjadi **FALSE**
+
+**Contoh Kasus: Buat model prediksi untuk data `gas_ts` menggunakan fungsi `HoltWinters()`!**
+
+**Data:**
+
+```{r}
+autoplot(gas_ts)
+```
+> Secara umum, pola data memiliki trend yang semakin lama semakin tinggi. Kemudian terlihat bahwa data tidak memiliki seasonal/pola berulang.
+
+**Cross Validation:**
+
+```{r}
+# 10 tahun terakhir sebagai data test
+gas_train <- head(gas_ts, length(gas_ts)-10)
+gas_test <- tail(gas_ts, 10)
+```
+
+**Modeling:**
+
+```{r}
+# your code
+model_gas <- HoltWinters(gas_train, gamma = F)
+```
+
+```{r}
+# print model
+model_gas
+```
+
+**Forecasting:**
+
+Lakukan forecasting untuk `n`-periode kedepan sesuai panjang periode di data test. Dapat menggunakan fungsi `forecast()` dengan argumen:
+
+* `object`: model time series
+* `h`: horizon, berapa periode (data) yang ingin di forecast.
+
+```{r}
+forecast_gas <- forecast(object = model_gas, h = 10) 
+```
+
+```{r}
+# print result
+forecast_gas
+```
+
+**Visualize:**
+
+```{r}
+# visualisasi: prediksi vs aktual
+gas_ts %>% 
+  autoplot() +
+  autolayer(forecast_gas$mean, series = "hasil prediksi") +
+  autolayer(model_gas$fitted[,1], series = "fitted value")
+```
+
+```{r}
+# cara visualisasi lain: perbandingan prediksi dan aktual
+library(TSstudio)
+
+test_forecast(actual = gas_ts, # data aktual full
+              forecast.obj = forecast_gas, # hasil forecast
+              test = gas_test) # data test
+```
+
+**Model Evaluation:**
+
+* MAPE: Mean absolute percentage error
+
+```{r}
+library(MLmetrics)
+accuracy(forecast_gas, gas_test)
+```
+
+Insight: Model `forecast_gas` memiliki error sebesar 11.108596% ketika memprediksi data test.
+
+**Dive Deeper: Data Souvenir terdiri dari 84 observasi penjualan souvenir per bulan sejak tahun 1987**
+
+1. Read data `fancy.dat` dan simpan dengan nama object `souvenir`
+```{r}
+# read data souvenir
+souvenir <- scan("data_input/fancy.dat")
+head(souvenir)
+```
+
+Data `souvenir` terdiri dari 84 observasi penjualan souvenir per bulan dari tahun 1987.
+
+2. Buat time series object dan simpan dengan nama object `souvenir_ts`
+
+```{r}
+# object souvenir_ts
+souvenir_ts <- ts(data = souvenir,start = c(1987,1), frequency = 12) 
+```
+
+c(1987,1): artinya data kita start di bulan januari tahun 1987
+freq:12 kita ingin melihat pola tahunan
+
+3. Visualisasikan data `souvenir_ts`
+
+Apakah tipe data time series yang terbentuk dari data `souvenir_ts`?
+```{r}
+souvenir_ts %>% 
+  autoplot()
+```
+
+4. Decomposition
+
+Tujuannya untuk menguraikan tipe-tipe data pada setiap komponen time series yang ada agar tepat dalam penentuan pemilihan model untuk forecast nya.
+
+```{r}
+# menguraikan komponen data time series
+souvenir_ts %>% 
+  decompose(type = "multiplicative") %>% 
+  autoplot()
+```
+
+5. Splitting Data
+
+* Data train: 1987 - 1992 (6 tahun) simpan dengan nama object `souvenir_train`
+* Data test: 1993 (1 tahun) simpan dengan nama object `souvenir_test`
+```{r}
+# test menggunakan `tail()`
+test <- tail(souvenir_ts, 12)
+
+# train menggunakan `head()`
+train <- head(souvenir_ts, 6*12)
+
+#train <- head(souvenir_ts, length(souvenir_ts)-length(test))
+```
+
+6. Melakukan model fitting pada data train `train`
+
+```{r}
+#ets(model = "ZMM")
+model_souvenir <- HoltWinters(x = train, seasonal = "multiplicative")
+model_souvenir
+```
+
+7. Melakukan prediksi pada data test `souvenir_test` dengan menggunakan fungsi `forecast()` dari library `forecast`
+
+* `object` = model time series
+* `h` = berapa banyak data kedepan yang akan di forecast
+
+```{r}
+# forecast menggunakan model multiplicative
+souvenir_forecast <- forecast(object = model_souvenir, h = 12)
+souvenir_forecast
+```
+
+h = 12 artinya kita akan melakukan forecasting untuk 12 bulan kedepan. Jumlah h yang kita tentukan sebanyak jumlah data test.
+
+> Intrepretasi hasil forecast :
+
+Visualisasi hasil forecast
+```{r}
+# visualisasi hasil forecast dari model multiplicative
+train %>% 
+  autoplot()+
+  autolayer(model_souvenir$fitted[,1], series = "fitted")+
+  autolayer(souvenir_forecast$mean, series = "forecast")+
+  autolayer(test, series = "data test")
+```
+
+> Insight: 
+
+- Secara visual garis prediksi nilai test sudah mengikuti data test yang sebenarnya dengan baik
+- Berdasarkan garis data aktual dan data prediksi di data train, pola data juga terlihat sudah tertangkap dengan baik
+- Secara umum, model terlihat sudah baik untuk memprediksi 
+
+8. Model evaluation menggunakan data `souvenir_test`
+```{r}
+# model multiplicative
+# data forecast, data actual
+accuracy(souvenir_forecast$mean, test)
+```
+
+> Insight: Model `souvenir_forecast` memiliki error sebesar 21.15% dalam memprediksi data test.
+
+Evaluasi:
+- Apabila asumsi MAPE yang baik adalah di sekitar 10%, maka MAPE masih cenderung besar. Maka bisa dicoba tuning model -> alpha, beta, gamma diubah.
+
+*Note:* 
+- Jadikan model HoltWinters() dengan nilai coeff yang diatur otomatis sebagai baseline model, kemudian coba naikkan atau turunkan coeff berdasarkan pehamanan terkait data kita. 
+
+**Dive Deeper**
+
+Gunakanlah data `nybirth.csv`. Buatlah model time series yang tepat untuk data tersebut, analisislah pola time series yang ada pada data tersebut, apakah multiplicative atau additive? Lakukanlah forecasting dan lihatlah model evaluationnya. 
+
+1. Read Data
+```{r}
+birth <- read.csv("data_input/nybirth.csv")
+```
+
+2. Buatlah object ts
+```{r}
+birth_ts <- ts(birth$births, start = c(1946,1), freq = 12)
+```
+
+3. Visualisasikan object ts
+```{r}
+birth_ts %>% 
+  autoplot()
+```
+
+4. Splitting train test, untuk data train 12 tahun, data test 2 tahun
+```{r}
+# test
+birth_test <- tail(birth_ts, 2*12)
+# train
+birth_train <- head(birth_ts, length(birth_ts)- length(birth_test))
+```
+
+5. Lakukan decompose untuk data train dan visualisasikan untuk menentukan additive atau multiplicative
+```{r}
+birth_train%>% 
+  decompose(type = "additive") %>% 
+  autoplot()
+```
+
+6. Modelkan dengan metode yang tepat yang sudah dipelajari
+
+a. model dengan nilai smoothing nya auto
+b. model dengan nilai smoothing dengan mendefinisikan nilai alpha beta dan gamma secara manual
+```{r}
+# a
+model_birth1 <- HoltWinters(x = birth_train, seasonal = "additive")
+model_birth1
+# b (Pak Kevin)
+model_birth2 <- HoltWinters(x = birth_train, seasonal = "additive", alpha = 0.12, beta = 0.33, gamma = 0.34)
+```
+
+7. Lakukanlah forecasting untuk 2 tahun kedepan (24 bulan)
+```{r}
+birth_forecast <- forecast(model_birth1, h = 24)
+birth_forecast2 <- forecast(model_birth2, h = 30)
+```
+
+8. Visualisasikan data train, test dan hasil forecastnya
+```{r}
+birth_train %>% 
+  autoplot() +
+  autolayer(model_birth2$fitted[,1]) + 
+  autolayer(birth_test) +
+  autolayer(birth_forecast2$mean)
+
+```
+
+9. Model Evaluation
+
+```{r}
+accuracy(birth_forecast, birth_test)
+accuracy(birth_forecast2, birth_test)
+```
+
+> Insight:
+- Berdasarkan nilai MAPE pada data test model `birth_forecast2` lebih baik dalam melakukan prediksi dengan error model sebesar 2.183942%
+
+**Summary Day 3:** 
+
+**Modelling**
+
+1. Kita harus bisa mencocokan model sesuai data. Bagaimana cara buat model (mengisi argumen2 pada fungsi) bila ada atau tidak ada Trend/Seasonal/Error.
+
+2. Kita boleh set auto langsung di awal. 
+
+```{r eval = F}
+# misal:
+ets(data, "ZZZ")
+HoltWinters(data)
+```
+
+Namun penting untuk kita mengetahui apa yang dilakukan model auto tersebut. Sehingga bisa mengambil insight dari info alpha, beta, gamma. Hal ini juga bermanfaat ketika kita mau improve model dari model auto yang sudah terbentuk.
+
+**Workflow TS**
+
+* read data
+* buat objek ts
+* eda: autoplot + decompose
+* cross validation
+* modelling
+* forecast
+* evaluation
+
+# ARIMA 
+
+**Auto Regressive Integrated Moving Average** (ARIMA) adalah gabungan antara dua metode, yaitu **Autoregressive** (AR) dan **Moving Average** (MA). 
+
+### Stasionarity
+
+Syarat agar data dapat diolah menggunakan ARIMA adalah data harus bersifat **stasioner**. Data bersifat stasioner bila nilainya berfluktuasi disekitar mean nya. [^4].
+
+```{r, out.width = "80%", echo = FALSE, fig.align = "center"}
+knitr::include_graphics("assets/stationarycomparison.png")
+```
+
+Jadi untuk membuat datanya stasioner, cara yang paling umum digunakan adalah dengan melakukan differencing `diff`, yaitu **mengurangi data saat ini dengan data sebelumnya**[^5]. Jumlah differencing bisa lebih dari 1 kali, tergantung kompleksitas data.
+
+```{r}
+x <- c(5, -3, 6, 7)
+x
+
+# diff
+diff(x)
+
+# diff 2 kali
+diff(diff(x))
+```
+
+```{r}
+# contoh lain + visualisasi
+plot(gas_ts)
+plot(diff(gas_ts))
+```
+
+**Mengapa perlu di differencing?**
+
+Data harus stasioner agar memenuhi kebutuhan model **Autoregressive** di ARIMA. 
+
+Model Autoregressive akan membuat **linear regression** dengan **lag dari data sebagai prediktor**. 
+
+* data `gas_ts` asli (non-stationer) dan lag-nya.
+
+```{r echo=FALSE}
+# dummy data
+nonstat <- data.frame(
+  xt = as.vector(gas_ts),
+  lag1 = lag(x = as.vector(gas_ts), n = 1), # 1 tahun sebelumnya
+  lag2 = lag(x = as.vector(gas_ts), n = 2), # 2 tahun sebelumnya
+  lag3 = lag(x = as.vector(gas_ts), n = 3) # 3 tahun sebelumnya
+  )
+
+tail(nonstat)
+```
+
+```{r}
+GGally::ggcorr(nonstat)
+```
+
+* data setelah dilakukan differencing
+
+```{r}
+stat <- stat <- data.frame(
+  xt = as.vector(diff(gas_ts)),
+  lag1 = lag(x = as.vector(diff(gas_ts)), n = 1), # 1 tahun sebelumnya
+  lag2 = lag(x = as.vector(diff(gas_ts)), n = 2), # 2 tahun sebelumnya
+  lag3 = lag(x = as.vector(diff(gas_ts)), n = 3) # 3 tahun sebelumnya
+  )
+
+tail(stat)
+```
+
+```{r}
+GGally::ggcorr(stat)
+```
+
+**Kesimpulannya:**
+- Model ARIMA butuh data yang stasioner
+- Kalau data tidak stasioner, maka perlu di-differencing (pakai `diff()`)
+- Differencing dilakukan untuk handle prediktor yang saling berkorelasi kuat. 
+
+### AR dan MA Models
+
+* **Autoregressive (AR model)** untuk melakukan prediksi menggunakan lag data sebagai prediktor [^6].
+
+$$Y_t = \alpha + \beta_1Y_{t-1}+\beta_2Y_{t-2}+...+\beta_pY_{t-p}+ \epsilon_1$$
+
+Ket:
+
+* $Y_{t-1}$: adalah lag1 
+* $\beta_1$: adalah coefficient dari lag1 
+* $\alpha$: adalah intercept.
+
+* **Moving Average (MA Model)** dalam ARIMA artinya kita melakukan rata-rata berjalan terhadap data time series itu sendiri[^7]. Moving Average Model (MA model) untuk **smoothing error**
+
+### ARIMA in R
+
+> ARIMA(p,d,q) [^8]
+
+Tahapan ARIMA:
+
+1. Read data
+2. Ubah menjadi objek time series
+3. Melakukan pengujian stasioner menggunakan **adf.test**:
+  * catat info berapa kali perlu differencing sampai data menjadi stasioner
+4. Buat model arima otomatis menggunakan `auto.arima()`
+5. Kita bisa buat model arima manual dengan `arima()` dan menentukan ordo:
+  * `p`: ordo AR, tentukan dari plot PACF
+  * `d`: berapa kali differencing (hasil adf.test)
+  * `q`: ordo MA, tentukan dari plot ACF
+  * Buat model perbandingan dari beberapa kemungkinan ordo.
+6. Cari model terbaik dari error yang terkecil.
+
+**Study Case: Nitrous Oxide Gas Emission Indonesia**
+
+Kita akan coba melakukan forecast pada data `environment_1970f.csv`, dimana yang akan kita ubah kedalam bentuk object time series adalah data `Nitrous.oxide.emissions..thousand.metric.tons.of.CO2.equivalent.`
+
+1. Read Data 
+```{r}
+# read data environment_1970f.csv
+no <- read.csv("data_input/environment_1970f.csv")
+head(no)
+```
+
+2. Membuat object time series untuk kolom `Nitrous.oxide.emissions..thousand.metric.tons.of.CO2.equivalent.`
+```{r}
+no_ts <- ts(data = no$Nitrous.oxide.emissions..thousand.metric.tons.of.CO2.equivalent.,
+             start = 1970,
+             end = 2012,
+             frequency = 1)
+
+```
+
+3. Cek apakah object ts stasioner
+
+* melihat berdasarkan visual
+```{r}
+no_ts %>% 
+  autoplot()
+```
+
+* melakukan pengujian menggunakan `adf.test()`
+
+- H0: Data tidak stasioner
+- H1: Data stasioner (ini yang diinginkan)
+
+*Tolak H0 ketika p-value < 0.05*
+
+```{r warning=F, message=F}
+# cek adf test: data tanpa differencing
+library(tseries)
+adf.test(no_ts)
+```
+
+> yang diinginkan p-value < 0.05
+
+> Insight: data tidak stasioner
+
+```{r}
+# cek adf test: data dengan differencing 1x
+adf.test(diff(no_ts))
+```
+
+Insight: Setelah differencing 1x data `no_ts` sudah stasioner.
+
+```{r eval=FALSE}
+# berikut referensi bila data perlu dilakukan lebih dari 1x diff
+adf.test(diff(no_ts, differences = 2))
+```
+
+4. Buat model Auto ARIMA:
+
+```{r}
+model_auto <- auto.arima(y = no_ts)
+
+summary(model_auto)
+```
+
+Model auto arima menghasilkan MAPE 25.68% di data train.
+
+5. Coba buat model ARIMA secara manual:
+
+`ARIMA(p,d,q)`
+
+* p: ordo AR (Autoregresive model)
+* d: berapa kali differencing
+* q: ordo MA (Moving average)
+
+1. Ordo `d`: 1
+
+2. Ordo `p` dan `q`:
+
+Untuk mencari order `p` untuk model AR, kita dapat melihat plot **PACF (Partial Autocorrelation Function)**.
+
+> PACF memperlihatkan korelasi antara t (saat ini) dengan t-k (lag nya) tanpa dipengaruhi oleh korelasi periode ditengahnya. Misalnya, korelasi antara hari jumat ke rabu.
+
+Untuk mencari order `q` untuk model MA, kita dapat melihat plot **ACF (Autocorrelation Function)**.
+
+> ACF memperlihatkan korelasi antara t dan t-k, dengan dipengaruhi periode ditengahnya. Misalnya, korelasi antara hari jumat ke rabu, dengan mempertimbangkan korelasi antara jumat ke kamis dan kamis ke rabu.
+
+
+```{r}
+# melihat plot acf dan pacf menggunakan `tsdisplay()`
+tsdisplay(diff(no_ts)) # data ts yang sudah stasioner
+```
+
+Pertama lihat pattern ACF dan PACF:
+
+Ada 2 tipe pola pada plot PACF dan ACF:
+- dies down/decay: mengalami penurunan atau kenaikan secara lambat
+- cuts off lag: mengalami penurunan atau kenaikan secara cepat
+
+```{r out.width="60%", fig.align='center', echo=FALSE}
+knitr::include_graphics("assets/decay.PNG")
+```
+
+Maka: 
+ACF: cut off
+PACF: dies down/cut off
+
+```{r out.width="60%", fig.align='center', echo=FALSE}
+knitr::include_graphics("assets/acfpacf.PNG")
+```
+
+Model yg dipakai: 
+- Kondisi 1: ACF (cut off), PACF(dies down) -> `MA`
+-> kita akan set ordo (p,d,q) -> Arima(0,1,1)
+
+- Kondisi 2: ACF (cut off), PACF(cut off) -> `ARMA`
+
+Selanjutnya perhatikan garis yang keluar dari batas biru (signifikan), terjadi pada lag ke berapa saja?
+
+* Ordo p: 1,2,4
+* Ordo d: 1
+* Ordo q: 1
+
+Sehingga dibuat kombinasi model ARIMA dari template `ARIMA(p,d,q)`:
+
+`ARIMA(p,d,q)`
+* ARIMA(1,1,1)
+* ARIMA(2,1,1)
+* ARIMA(4,1,1)
+
+```{r}
+# buat model
+model_arima1 <- Arima(y = no_ts, order = c(0,1,1)) 
+model_arima2 <- Arima(y= no_ts, order = c(1,1,1))
+model_arima3 <- Arima(y= no_ts, order = c(2,1,1))
+model_arima4 <- Arima(y= no_ts, order = c(4,1,1))
+```
+
+6. Goodness of Fit (Pemilihan model terbaik)
+
+Untuk pemilihan model terbaik kita bisa melihat nilai MAPE (ke data train) untuk seluruh model yang sudah dibuat
+
+```{r}
+accuracy(model_arima1) 
+accuracy(model_arima2) 
+accuracy(model_arima3) 
+accuracy(model_arima4) 
+accuracy(model_auto)
+```
+
+> Model terbaik berdasarkan nilai MAPE adalah `mode_arima3` dengan ordo (2,1,1)
+
+---
+
+### SARIMA in R
+
+Jika data time series memiliki pola seasonal, maka kita dapat menambahkan term seasonal pada ARIMA dan menjadi **Seasonal Auto Regressive Integrated Moving Average** (SARIMA).
+
+**Study Case: Monthly Motorcycle Sales 2011-2019**
+
+Data penjualan motorcycle per bulan di tahun 2011-2019.
+
+```{r}
+# read data
+sales <- read.csv("data_input/DAUTONSA.csv") %>% 
+        mutate(DATE = ymd (DATE))
+tail(sales, 20)
+```
+
+Data di atas merupakan data rata-rata penjualan motor di suatu dealer dari tahun 1967-2019.
+
+- `DATE`: tanggal saat dilakukan pencatatan penjualan
+- `DAUTONSA`: rata-rata penjualan.
+
+* untuk kebutuhan analisis, datanya akan kita subset dari tahun 2011 keatas
+```{r}
+# filter tahun 2011 keatas
+sales_clean <- sales %>% 
+               filter(DATE >= "2011-01-01")
+head(sales_clean)
+```
+
+**Buat objek ts dengan seasonality tahunan**:
+
+```{r}
+sales_ts <- ts(data = sales_clean$DAUTONSA,
+               start = c(2011,1), # mulai di tahun 2011 bulan januari
+               frequency = 12) # ingin melihat pola tahunan
+```
+
+**Cross Validation**:
+
+Train data : diambil 7 tahun pertama
+Test data : sisanya
+
+```{r}
+# data train selama 7 tahun
+sales_train <- head(sales_ts, 7*12)
+
+# data test 1.5 tahun (12+6)
+sales_test <- tail(sales_ts,length(sales_ts)-length(sales_train))
+ 
+```
+
+
+**EDA**
+
+Plot data time series:
+
+```{r}
+autoplot(sales_train)
+```
+
+Cek apakah data stasioner:
+
+* differencing pada SARIMA dilakukan dengan:
+  - selisih dengan lag kelipatan seasonalnya (sesuai frequency)
+  - bila belum stasioner, differencing kembali dengan metode biasa `diff()`
+
+```{r}
+# diff untuk efek seasonal
+adf.test(diff(sales_train, lag = 12))
+```
+
+Insight: Data belum stasioner karena masih > 0.05
+
+```{r}
+# diff efek seasonal 1x & diff biasa
+sales_train %>% 
+  diff(lag = 12) %>%  # diff efek seasonal
+  diff(lag = 1) %>% 
+  adf.test()
+```
+
+> Insight: Data sudah stasioner karena p-value < alpha (0.05)
+
+Note: 
+
+* Diff data seasonal biasanya 1x saja
+* kalau belum stasioner, maka lanjutkan dengan diff data biasa (max 2x)
+* kalau belum stasioner juga, tidak disarankan menggunakan ARIMA.
+
+**Pembuatan model Auto SARIMA**
+
+```{r}
+model_auto_sarima <- auto.arima(sales_train, seasonal = T)
+
+model_auto_sarima
+```
+
+Insight: Dikeluarkan formula model **ARIMA(0,1,1)(0,1,0)[12]** 
+
+template yang digunakan: `ARIMA(pdq)(PDQ)[frequency]`
+
+* pdq(0,1,1): ordo untuk data secara umum
+* PDQ(0,1,0): ordo untuk efek seasonal
+* [12]: frequency data
+
+**Model SARIMA manual**
+
+Penentuan `p,d,q` dan `P,D,Q` masih sama:
+
+* `p` & `P`: lihat plot PACF, namun untuk P pakai lag kelipatan seasonal
+* `d`: lihat hasil differencing (brp kali diff seasonal dan diff biasa)
+* `q` & `Q`: plot ACF, namun untuk Q pakai lag kelipatan seasonal
+
+Cheatsheet modelnya juga masih sama:
+
+```{r out.width="60%", fig.align='center', echo=FALSE}
+knitr::include_graphics("assets/acfpacf.PNG")
+```
+
+```{r}
+# plot ACF & PACF dengan tsdisplay 
+sales_train %>% 
+  diff(lag = 12) %>%  # diff efek seasonal
+  diff(lag = 1) %>% 
+  tsdisplay()
+```
+
+Untuk **efek seasonal** (P,D,Q), perhatikan garis lag per seasonalnya (12, 24, dst):
+
+
+* `P`: 0
+* `D`: 1
+* `Q`: 0
+
+Untuk **keseluruhan data** (p,d,q), perhatikan garis lag 1 dst (seperti biasa): 
+
+
+Sehingga yang cocok model **ARMA** dengan:
+
+* `p`: 1, 2
+* `d`: 1
+* `q`: 1
+
+Berarti kombinasi model yang mungkin terbentuk adalah:
+
+* Sarima(1,1,1)(0,1,0)[12]
+* Sarima(2,1,1)(0,1,0)[12]
+
+
+```{r}
+sarima1 <- Arima(y = sales_train, order = c(1,1,1), seasonal = c(0,1,0))
+sarima2 <- Arima(y = sales_train, order = c(2,1,1), seasonal = c(0,1,0))
+```
+
+```{r}
+summary(model_auto_sarima)
+summary(sarima1)
+summary(sarima2)
+```
+
+**Forecast**:
+
+```{r}
+forecast_sarima_auto <- forecast(model_auto_sarima, h = length(sales_test))
+forecast_sarima_1 <- forecast(sarima1, h = length(sales_test))
+forecast_sarima_2 <- forecast(sarima2, h = length(sales_test))
+```
+
+**Evaluation**:
+
+```{r}
+# MAPE: Mean Absolute Percentage Error
+accuracy(forecast_sarima_auto, sales_test)
+accuracy(forecast_sarima_1, sales_test)
+accuracy(forecast_sarima_2, sales_test)
+```
+
+Insight: Model terbaik adalah `sarima2` dengan MAPE 7.19% di data test.
+
+* Plot hasil forecast
+
+```{r}
+# menggunakan autoplot dan autolayer
+sales_train %>% 
+  autoplot()+
+  autolayer(sales_test, series = "data test")+
+  autolayer(sarima2$fitted, series = "fitted")+ # fitted model terpilih
+  autolayer(forecast_sarima_2$mean, series = "forecast") #hasil forecast model
+```
+
+# Assumption Checking
+
+## Normality of Residuals
+
+* H0: Residual/error berdistribusi normal (yang diinginkan) 
+* H1: Residual tidak berdistribusi normal
+
+**Keputusan: Tolak H0 ketika pvalue < 0.05**
+
+```{r}
+# Shapiro Test
+shapiro.test(sarima2$residuals)
+```
+
+Insight: berdisribusi normal (uji asumsi terpenuhi)
+
+## No-Autocorrelation on Residuals
+
+* H0: Residual tidak mengalami autokorelasi (yang diinginkan)
+* H1: Residual mengalami autokorelasi
+
+**Keputusan: Tolak H0 ketika pvalue < 0.05**  
+
+```{r}
+# Ljung-Box test
+Box.test(sarima2$residuals, type = "Ljung-Box")
+```
+
+Insight: Residual tidak mengalami autokorelasi (uji terpenuhi)
+
+**Summary Day 4**
+
+Hal yang dipelajari:
+
+* ARIMA adalah gabungan dari Autoregressive (AR) dan MA (Moving Average)
+  * AR: regresi linear yang menggunakan **lag data** sebagai prediktor
+  * MA: smoothing error dengan moving average
+* untuk membuat model ARIMA:
+  * model otomatis: ...
+  * model manual: ...
+    * `p`: pengaturan untuk ..., lihat dari plot ...
+    * `d`: pengaturan untuk ..., lihat dari hasil ...
+    * `q`: pengaturan untuk ..., lihat dari plot ...
+  * cheatsheet tahapan lebih detail tertera di atas
+* Tahapan forecasting - evaluasi model sama persis seperti model time series lainnya.
+
+# Additional Materials
+
+* [STL Decomposition](https://otexts.com/fpp2/stl.html)
+* [Function documentation](https://pkg.robjhyndman.com/forecast/reference/forecast.stl.html)
+  
+Metode yang kita gunakan sebelumnya untuk dekomposisi data adalah **classical decompositon**. Terdapat metode lain yang lebih robust yaitu **STL** (Seasonal and Trend Decomposition using Loess). Berikut adalah fungsi nya di R dari library `forecast`: 
+
+* STL decompose: `mstl()`
+* Modeling using STL decompose: `sltm()`
+  * `y` = objek ts
+  * `s.window` = seasonal window, sesuai frequency
+  * `method` = model time series ("ets"/"arima")
+
+```{r}
+# decompose
+mstl(AirPassengers) %>% 
+  autoplot()
+```
+
+```{r}
+# modeling
+air_stl_arima <- stlm(y = AirPassengers, # data 
+                      s.window = 12, # seasonal window = frequency 
+                      method = "arima") # kita bisa pilih "arima"/"ets"
+
+# plotting forecasting result on data train
+autoplot(AirPassengers) +
+  autolayer(air_stl_arima$fitted)
+```
+Cek evaluasi error di data train:
+
+```{r}
+accuracy(air_stl_arima)
+```
+ 
+# References
+
+[^1]: [Simple Exponential Smoothing](https://otexts.com/fpp2/ses.html)
+[^2]: [Trend Methods](https://otexts.com/fpp2/holt.html)
+[^3]: [Holt's Exponential Smoothing](https://otexts.com/fpp2/holt-winters.html)
+[^4]: [Stationarity and Differencing](https://otexts.com/fpp3/stationarity.html)  
+[^5]: [Explanation `diff()` in R](http://www.datasciencemadesimple.com/difference-function-in-r/)
+[^6]: [Auto Regression Model](https://otexts.com/fpp2/AR.html)
+[^7]: [Moving Average Model](https://otexts.com/fpp2/MA.html)
+[^8]: [Non Seasonal Model](https://otexts.com/fpp2/non-seasonal-arima.html) 
+[^9]: [ARIMA in R](https://otexts.com/fpp2/arima-r.html)
+[^10]: [Seasonal ARIMA](https://otexts.com/fpp2/seasonal-arima.html)
+
+More resource to learn more :
+
+- [ARIMA vs ETS](https://otexts.com/fpp2/arima-ets.html)
+- [Regression ARIMA](https://otexts.com/fpp2/regarima.html)
+- [Multiple Seasonal Time Series](https://algotech.netlify.com/blog/multiple-seasonal/)
+- [Multiple Seasonal using Purrr](https://algotech.netlify.com/blog/purrr-operly-fitting-multiple-time-series-model/)
+- [Tidy Time Series and Forecasting in R](https://github.com/rstudio-conf-2020/time-series-forecasting)
+- [Forecasting: Principles and Practice, Rob J Hyndman and George Athanasopoulos, Monash University, Australia](https://otexts.com/fpp2/)

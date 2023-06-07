@@ -1,0 +1,6 @@
+"0","# dimdisc: dimension description
+loan_dim <- dimdesc(loan_pca, axes = c(1:10))
+"
+"2","Error in dimdesc(loan_pca, axes = c(1:10)) : 
+  could not find function ""dimdesc""
+"

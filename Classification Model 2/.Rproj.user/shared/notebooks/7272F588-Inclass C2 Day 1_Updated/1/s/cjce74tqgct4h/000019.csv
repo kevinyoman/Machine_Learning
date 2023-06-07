@@ -1,0 +1,13 @@
+"0","# Please type your code down below
+sms_train[1,]
+"
+"1","<<DocumentTermMatrix (documents: 1, terms: 315)>>
+"
+"1","Non-/sparse entries: 2/313
+"
+"1","Sparsity           : 99%
+"
+"1","Maximal term length: 9
+"
+"1","Weighting          : term frequency (tf)
+"

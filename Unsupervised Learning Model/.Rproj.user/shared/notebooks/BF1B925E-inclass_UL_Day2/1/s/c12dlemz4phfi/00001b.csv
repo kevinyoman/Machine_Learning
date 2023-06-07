@@ -1,0 +1,5 @@
+"0","# plotting eigen vector as new coordinate"
+"0","slope1 <- eigen(A)$vectors[1,1]/eigen(A)$vectors[2,1]"
+"0","slope2 <- eigen(A)$vectors[1,2]/eigen(A)$vectors[2,2]"
+"0",""
+"0","plot(data, pch=19, cex=0.25, xlim=c(-1.5,1.5), ylim=c(-1.5,1.5))"

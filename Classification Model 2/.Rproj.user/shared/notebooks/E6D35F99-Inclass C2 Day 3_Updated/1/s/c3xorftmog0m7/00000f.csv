@@ -1,0 +1,7 @@
+"0","sms.corpus <- tm_map(sms.corpus, transformer, ""!"")"
+"0",""
+"0","sms.corpus[[9]]$content"
+"1","[1]"
+"1"," ""winner     valued network customer    selected  receive   prize reward   claim call   claim code kl  valid  hours  """
+"1","
+"

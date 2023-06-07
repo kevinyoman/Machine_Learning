@@ -1,0 +1,4 @@
+"0","# PCA & Visualization"
+"0","pca_crime <- prcomp(USArrests, scale=T)"
+"0",""
+"0","fancy_biplot(pca_crime)"

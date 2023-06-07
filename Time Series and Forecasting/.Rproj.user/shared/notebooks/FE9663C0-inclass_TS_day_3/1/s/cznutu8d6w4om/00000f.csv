@@ -1,0 +1,6 @@
+"0","seas_data <- birth %>% "
+"0","  mutate(seasonal = birth_dc$seasonal, # simpan seasonal hasil decompose"
+"0","         month = month(ymd(date), label = T, abbr = T)) %>% # ambil informasi bulan"
+"0","  distinct(month, seasonal) # ambil unique dari tiap bulan & seasonal"
+"0",""
+"0","seas_data"

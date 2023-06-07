@@ -1,0 +1,8 @@
+"0","copiers <- 
+  copiers %>% 
+    mutate_if(.predicate=is.character(),
+              .funs = as.factor)
+"
+"2","Error in is.character() : 
+  0 arguments passed to 'is.character' which requires 1
+"

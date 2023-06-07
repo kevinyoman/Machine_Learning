@@ -1,0 +1,6 @@
+"0","# cara visualisasi lain: perbandingan prediksi dan aktual"
+"0","library(TSstudio)"
+"0",""
+"0","test_forecast(actual = gas_ts, # data aktual full"
+"0","              forecast.obj = forecast_gas, # hasil forecast"
+"0","              test = gas_test) # data test"

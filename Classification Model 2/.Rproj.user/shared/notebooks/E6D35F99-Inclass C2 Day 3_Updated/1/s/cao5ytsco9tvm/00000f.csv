@@ -1,0 +1,4 @@
+"0","# Please type your code down below"
+"0","model_diabetes <- "
+"0","ctree(formula = diabetes ~ .,"
+"0","      data = diab_train_up)"

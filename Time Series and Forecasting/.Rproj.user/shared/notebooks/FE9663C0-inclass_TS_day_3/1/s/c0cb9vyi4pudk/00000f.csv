@@ -1,0 +1,3 @@
+"0","model_sma_3 <-SMA(x = rain_ts, n = 3)"
+"0",""
+"0","model_sma_12 <-SMA(x = rain_ts, n = 12)"

@@ -1,0 +1,4 @@
+"0","# inspect pola data"
+"0","gas_ts %>% "
+"0","  autoplot() + "
+"0","  geom_point()"

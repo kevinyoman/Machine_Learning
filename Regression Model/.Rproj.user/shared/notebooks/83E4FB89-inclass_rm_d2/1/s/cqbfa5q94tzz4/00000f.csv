@@ -1,0 +1,1 @@
+"0","model_no_outlier <- lm(Profit ~ Sales, copiers_new)"

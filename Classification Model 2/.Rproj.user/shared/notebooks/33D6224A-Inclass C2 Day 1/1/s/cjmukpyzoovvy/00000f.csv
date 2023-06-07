@@ -1,0 +1,9 @@
+"0","# Please run the code down below
+(p_purchase * p_female_purchase * p_age30_purchase * p_high_purchase) /
+  (p_purchase * p_female_purchase * p_age30_purchase * p_high_purchase +
+     p_not_purchase * p_female_not_purchase * p_age30_not_purchase * p_high_not_purchase)
+"
+"1","[1]"
+"1"," 0.1926676"
+"1","
+"

@@ -1,0 +1,4 @@
+"0","# Please type your code down below"
+"0","naive_spam <- naiveBayes(x = sms_train_bn, "
+"0","                         y = label_train, "
+"0","                         laplace = 1) # opsional"

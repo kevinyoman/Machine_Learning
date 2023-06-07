@@ -1,0 +1,7 @@
+"0","# Please run the code down below"
+"0","RNGkind(sample.kind = ""Rounding"")"
+"0","set.seed(100)"
+"0",""
+"0","index <- sample(nrow(diab), nrow(diab) * 0.8)"
+"0","diab_train <- diab[index,]"
+"0","diab_test <- diab[-index,]"

@@ -1,0 +1,3 @@
+"0","# hasil informasi trend dari fungsi `decompose`"
+"0","birth_dc$trend %>% "
+"0","  autoplot()"

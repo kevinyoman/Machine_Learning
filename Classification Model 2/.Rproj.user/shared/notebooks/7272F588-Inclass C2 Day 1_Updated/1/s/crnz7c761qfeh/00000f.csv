@@ -1,0 +1,6 @@
+"0","sms.corpus <- tm_map(sms.corpus, transformer, ""\\."")
+"
+"2","Error: unexpected '\\' in:
+""
+sms.corpus <- tm_map(sms.corpus, transformer, ""\""
+"

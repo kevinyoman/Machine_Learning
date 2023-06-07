@@ -1,0 +1,4 @@
+"0",""
+"0","# impute pakai nilai 0"
+"0","dat %>% "
+"0","  mutate(value = na.fill(value, 0))"

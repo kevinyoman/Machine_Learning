@@ -1,0 +1,1 @@
+"0","lines(data[,1], data[,1] * slope1, col=""blue"") # PC1"

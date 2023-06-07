@@ -1,0 +1,4 @@
+"0","library(zoo)"
+"0","# impute pakai ""extend"""
+"0","dat %>% "
+"0","  mutate(value = na.fill(value, ""extend""))"

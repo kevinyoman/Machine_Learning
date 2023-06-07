@@ -1,0 +1,3 @@
+"0","birth_ts <- ts(data  = birth$births,"
+"0","               start = c(1946, 1),"
+"0","               freq = 12) "

@@ -1,0 +1,1 @@
+"0","as.data.frame(ppt_100_pca$x[,c(1,2)])"

@@ -1,0 +1,1 @@
+"0","lines(x=copiers$Profit, y=(copiers$Profit+114.0625)/0.4229, type = ""l"", lty = 1, col='red')"

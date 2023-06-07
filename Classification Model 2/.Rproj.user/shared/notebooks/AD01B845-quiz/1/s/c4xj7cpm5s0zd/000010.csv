@@ -1,0 +1,2 @@
+"0","# your code here"
+"0","prob_test <- predict(model_rf, newdata=data_test, type='prob')"

@@ -1,0 +1,7 @@
+"0","# Please run the code down below"
+"0","bernoulli_conv <- function(x){"
+"0","  "
+"0","  x <- as.factor(ifelse(x > 0, 1, 0)) "
+"0","  return(x)"
+"0","  "
+"0","}"

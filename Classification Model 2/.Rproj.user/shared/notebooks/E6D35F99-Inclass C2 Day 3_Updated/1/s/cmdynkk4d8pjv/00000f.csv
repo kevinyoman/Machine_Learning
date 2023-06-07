@@ -1,0 +1,5 @@
+"0","# Please type your code down below"
+"0","sms_clean <- "
+"0","sms_raw %>% "
+"0","  select(-c(X, X.1, X.2)) %>% "
+"0","  mutate(v1 = as.factor(v1))"

@@ -1,0 +1,7 @@
+"0","# dimdisc: dimension description"
+"0","loan_dim <- dimdesc(loan_pca, # objek dari fungsi PCA()"
+"0","                    axes = c(1:10)"
+"0","                    )"
+"0",""
+"0","# variable yang berkontribusi untuk PC1 dengan menggunakan loan_dim$Dim.1$quanti"
+"0","as.data.frame(loan_dim$Dim.1$quanti) #Dim.1 adalah PC1"

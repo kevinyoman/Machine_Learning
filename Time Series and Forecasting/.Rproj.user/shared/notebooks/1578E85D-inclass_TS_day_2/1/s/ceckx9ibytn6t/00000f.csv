@@ -1,0 +1,4 @@
+"0","birth_ts %>% "
+"0","  window(start = 1948, end = 1950) %>% "
+"0","  autoplot() +"
+"0","  geom_point()"

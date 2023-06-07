@@ -1,0 +1,4 @@
+"0","rain_ts %>% "
+"0","  autoplot() +"
+"0","  autolayer(model_sma_3) +"
+"0","  autolayer(model_sma_12)"

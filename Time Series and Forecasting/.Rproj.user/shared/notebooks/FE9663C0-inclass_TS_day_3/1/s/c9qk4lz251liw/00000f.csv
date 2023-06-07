@@ -1,0 +1,3 @@
+"0","# read data environment_1970f.csv"
+"0","no <- read.csv(""data_input/environment_1970f.csv"")"
+"0","head(no)"

@@ -1,0 +1,6 @@
+"0","# Please run the code down below"
+"0","transformer <- content_transformer(FUN = function(x, pattern){"
+"0","  gsub(x = x, # Menjelaskan/mengdefinisikan data apa yg kita gunakan "
+"0","       pattern = pattern,  # Kita akan mengdefinisikan simbol atau patter yg terjadi pada data"
+"0","       replacement = "" "") # penggantinya"
+"0","})"

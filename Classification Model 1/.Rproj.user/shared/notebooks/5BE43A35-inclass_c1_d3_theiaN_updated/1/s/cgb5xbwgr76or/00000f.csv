@@ -1,0 +1,8 @@
+"0","library(gtools)"
+"0",""
+"0","# peluang -> log of odds dengan `logit()`"
+"0","logit(0.8)"
+"1","[1]"
+"1"," 1.386294"
+"1","
+"

@@ -1,0 +1,6 @@
+"0","library(xts)"
+"0",""
+"0","# birth_ts"
+"0","as.xts(birth_dc$x - birth_dc$seasonal) %>% "
+"0","  autoplot() %>% "
+"0","  plotly::ggplotly()"

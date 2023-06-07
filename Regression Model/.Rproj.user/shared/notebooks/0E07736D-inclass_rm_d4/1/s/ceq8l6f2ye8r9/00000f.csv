@@ -1,0 +1,6 @@
+"0","# hint: bila tulisan tidak rapih, tambahkan argumen di fungsi:"
+"0","# `hjust = 1` agar tulisan tidak menyentuh kotak"
+"0","# `layout.exp = 3` agar panel membesar 3 poin"
+"0",""
+"0","ggcorr(crime, label = T, hjust = 1, layout.exp = 5)"
+"0",""

@@ -1,0 +1,6 @@
+"0","plot.PCA(x = loan_pca, # objek dari fungsi PCA() dari library FactoMineR"
+"0","         choix = ""ind"", # jenis visualisasi yang akan ditampilkan, ind -> individual factor map"
+"0","         select = ""contrib 10"", # untuk identifikasi 10 outlier terluar"
+"0","         habillage = ""grade"", # untuk mewarnai titik observasi berdasarkan variable categorical (ditulis index/nama kolom)"
+"0","         invisible = ""quali"" # menghilangkan label variabel categorical"
+"0","         ) "

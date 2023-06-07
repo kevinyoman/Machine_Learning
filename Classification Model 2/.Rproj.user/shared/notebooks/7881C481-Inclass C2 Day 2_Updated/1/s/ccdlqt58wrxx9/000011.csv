@@ -1,0 +1,5 @@
+"0","# Please type your code down below"
+"0","model_dt <- ctree(diabetes~., data_train,"
+"0","                  control = ctree_control(mincriterion=0.005,"
+"0","                                             minsplit=0,"
+"0","                                             minbucket=0))"

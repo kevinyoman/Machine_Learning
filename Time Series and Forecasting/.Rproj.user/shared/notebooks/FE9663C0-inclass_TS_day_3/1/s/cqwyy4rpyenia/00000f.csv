@@ -1,0 +1,3 @@
+"0","birth_error <- birth_ts - birth_trend - birth_seasonal"
+"0",""
+"0","birth_error %>% autoplot()"

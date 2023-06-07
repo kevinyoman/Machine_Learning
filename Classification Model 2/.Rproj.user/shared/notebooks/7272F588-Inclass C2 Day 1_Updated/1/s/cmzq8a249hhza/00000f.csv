@@ -1,0 +1,5 @@
+"0","# Peluang Customer Membeli"
+"0","p_purchase <- 0.3575 "
+"0",""
+"0","# Peluang Customer Tidak Membeli"
+"0","p_not_purchase <- 0.6425"

@@ -1,0 +1,3 @@
+"0","# cara 2: menggunakan fungsi `ggcorr()`"
+"0","library(GGally)"
+"0","ggcorr(copiers, label = T)"

@@ -1,0 +1,4 @@
+"0"," # Please type your code down below"
+"0","sms_pred_class <- predict(object = naive_spam,"
+"0","                          newdata = sms_test_bn,"
+"0","                          type = ""class"")"

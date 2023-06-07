@@ -1,0 +1,2 @@
+"0","birth <- read.csv(""data_input/nybirth.csv"")"
+"0","head(birth, 20)"

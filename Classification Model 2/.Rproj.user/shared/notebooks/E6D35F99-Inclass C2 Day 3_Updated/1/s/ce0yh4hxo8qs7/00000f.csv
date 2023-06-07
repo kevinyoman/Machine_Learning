@@ -1,0 +1,6 @@
+"0","# Please type your code "
+"0",""
+"0","#install.packages(""e1071"")"
+"0","library(e1071)"
+"0","model_naive <- naiveBayes(formula = Purchased ~ .,"
+"0","                          data = cust_behaviour)"

@@ -1,0 +1,3 @@
+"0","# your code here"
+"0","model_ts <- decompose(assault_ts, type='additive')"
+"0","autoplot(model_ts)"

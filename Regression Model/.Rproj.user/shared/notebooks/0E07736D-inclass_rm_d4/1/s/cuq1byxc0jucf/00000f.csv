@@ -1,0 +1,2 @@
+"0","# buat model"
+"0","model_ineq <- lm(inequality ~ gdp, crime)"

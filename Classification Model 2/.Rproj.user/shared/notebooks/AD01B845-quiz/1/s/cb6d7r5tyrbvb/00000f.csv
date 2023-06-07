@@ -1,0 +1,4 @@
+"0","library(ROCR)"
+"0","# your code here"
+"0","pred_roc <- prediction(predictions = prob_test[,'yes'], "
+"0","                      labels = ifelse(data_test$default == 'yes',1,0)) "

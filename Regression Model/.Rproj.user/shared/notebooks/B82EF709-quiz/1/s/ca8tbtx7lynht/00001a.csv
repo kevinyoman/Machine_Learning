@@ -1,0 +1,6 @@
+"0","round(MAE(y_pred=pred_model,y_true=crime_test$crime_rate),2)
+"
+"1","[1]"
+"1"," 180.73"
+"1","
+"

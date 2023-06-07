@@ -1,0 +1,2 @@
+"0","# melihat variance yang dirangkum tiap PC"
+"0","plot(prcomp(ppt_z))"

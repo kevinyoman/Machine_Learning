@@ -1,0 +1,4 @@
+"0","sales <- data.frame(Sales = c(300,290,320,450))"
+"0","# library(skimr)"
+"0",""
+"0","sales"

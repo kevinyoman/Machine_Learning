@@ -1,0 +1,18 @@
+"0","# Please run the code down below"
+"0","lapply(sms.corpus[4:5]$content, as.character)"
+"1","[[1]]
+"
+"1","[1]"
+"1"," ""U dun say so early hor... U c already then say..."""
+"1","
+"
+"1","
+"
+"1","[[2]]
+"
+"1","[1]"
+"1"," ""Nah I don't think he goes to usf, he lives around here though"""
+"1","
+"
+"1","
+"

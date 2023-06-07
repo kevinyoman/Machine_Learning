@@ -1,0 +1,2 @@
+"0","# plot target dan prediktor"
+"0","plot(copiers$Sales, copiers$Profit)"

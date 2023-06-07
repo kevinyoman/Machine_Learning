@@ -1,0 +1,4 @@
+"0","gas_ts %>% "
+"0","  window(start = 1990, end = 2010) %>% "
+"0","  autoplot() + "
+"0","  geom_point()"

@@ -1,0 +1,13 @@
+"0","# Proporsi customer membeli dan tidak membeli
+prop.table(table(cust_behaviour$Purchased))
+"
+"1","
+"
+"1","    No "
+"1","   Yes "
+"1","
+"
+"1","0.6425 "
+"1","0.3575 "
+"1","
+"

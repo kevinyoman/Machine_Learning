@@ -1,0 +1,4 @@
+"0",""
+"0","pc_keep <- as.data.frame(pca$x[,1:4])"
+"0","  "
+"0","pc_keep"

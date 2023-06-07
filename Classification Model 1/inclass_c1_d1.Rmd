@@ -1,0 +1,444 @@
+---
+title: 'Classification 1 : In-class materials'
+author: "Team Algoritma"
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: true
+    df_print: paged
+    
+---
+
+```{r setup, include=FALSE}
+# clear-up the environment
+rm(list = ls())
+
+# chunk options
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  comment = "#>")
+options(scipen = 9999)
+
+# library
+library(dplyr)
+```
+
+Klasifikasi bertujuan untuk memprediksi kelas (**target variable kategorik**):
+
+* binary classification: 2 kelas
+* multiclass classification: > 2 kelas
+
+# Logistic Regression
+
+## Basic Intuition
+
+### Probability
+
+Pada dasarnya, ketika kita melakukan klasifikasi, kita menghitung **peluang**. 
+
+**Contoh:**
+
+Anda adalah student Algoritma yang akan mengerjakan kuis C1. Pada batch sebelumnya, ada 24 dari 30 student yang berhasil mengerjakan kuis. Apakah Anda akan lulus pada kuis C1 ini?
+
+```{r}
+# peluang
+24/30
+```
+```{r}
+# peluang tidak lulus
+1 - 0.8
+```
+```{r}
+# tentukan kelas
+
+```
+
+Berapa range peluang?
+
+* min: ...
+* max: ...
+
+Berapa range hasil prediksi model regresi?
+
+* min: ...
+* max: ...
+
+Dibutuhkan suatu jembatan agar regression dapat digunakan untuk memprediksi peluang. Jembatan itu adalah **Odds** dan **Log of Odds**.
+
+### Odds & Log of Odds
+
+Odds adalah bentuk lain dari peluang, yaitu perbandingan peluang antara **peluang kejadian terjadi/peluang kejadian tidak terjadi**.  
+
+$$\frac{p}{(1-p)}$$ 
+
+`p` = peluang suatu kejadian terjadi
+
+**Contoh 1:**
+
+Berapa odds dari Anda lulus mengerjakan kuis C1?
+
+```{r}
+# peluang = 0.8
+# peluang tidak lulus = 0.2
+# odds
+0.8/0.2
+```
+
+Interpretasi: Kejadian seseorang lulus kuis adalah **4 KALI lebih mungkin** dibandingkan tidak lulus kuis. 
+
+Dapat dianalogikan juga, bila odds = 4 (4:1), maka bila ada 4 orang lulus ada yang 1 tidak lulus.
+
+**Contoh 2:** 
+
+Anda hendak berpergian menggunakan pesawat dari Soekarno Hatta Airport. Bila diketahui dari 100 penerbangan di Soekarno Hatta, terdapat 25 pesawat `Delay`. Berapa odds pesawat Anda `On Time`?
+
+```{r}
+# peluang
+p <- 25/100
+# p on time 1-p 
+pon <- 1-p
+# odds
+pon/(1-pon)
+```
+
+Interpretasi:
+
+* ...
+
+Note: Kalau oddsnya 1 berarti peluangnya? ...
+
+Berapa range nilai dari odds? 
+
+```{r}
+# odds: p/1-p
+# min
+0/(1-0)
+# max
+1/(1-1)
+```
+
+* Probability: 0 1
+* Odds       : 0 Inf
+
+Log of odds adalah nilai odds yang dilogaritmikkan:
+
+\(logit(p) = log(\frac{p}{1-p})\)
+
+```{r}
+# log of odds - lulus kuis
+log(4)
+# log of odds - pesawat on time
+log(3)
+```
+
+Berapa range nilai log of odds?
+
+```{r}
+# min
+log(0/(1-0))
+# max
+log(1/(1-1))
+```
+
+* Probability: 0 1
+* Odds       : 0 inf
+* Log of odds: -inf inf
+
+Odds dan log of odds mampu menjembatani antara nilai yang dihasilkan oleh model regresi, ke rentang nilai peluang. **Logistic regression menghasilkan Log of Odds**. Nilai log of odds dapat dikembalikan ke bentuk odds (untuk diinterpretasikan) dan peluang sehingga dapat digunakan untuk klasifikasi.
+
+```{r}
+# log of odds -> odds
+odds <- exp(1.386294)
+odds
+```
+
+```{r}
+# odds -> peluang dengan `odds/(odds+1)`
+odds/(odds+1)
+```
+
+Terdapat cara lain:
+
+* `logit()`: peluang -> log of odds
+* `inv.logit()`: log of odds -> peluang
+
+```{r}
+library(gtools)
+
+# peluang -> log of odds dengan `logit()`
+logit(0.8)
+```
+
+```{r}
+# log of odds -> peluang dengan `inv.logit()`
+inv.logit(1.386294)
+```
+
+Fungsi `inv.logit()` ini juga biasa disebut *sigmoid function*.
+
+```{r}
+# sigmoid function
+curve(inv.logit(x), from = -10, to=10, 
+      xlab = "Log of Odds", 
+      ylab = "Peluang")
+```
+
+## `glm()` & Interpretation
+
+Anda adalah seorang analis performa student di universitas. Anda ditugaskan untuk memprediksi status kelulusan siswa dengan honors (cumlaude).
+
+```{r}
+# read & inspect data
+honors <- read.csv("data_input/sample.csv") %>% 
+  select(-femalexmath)
+
+glimpse(honors)
+```
+
+Deskripsi kolom:
+
+* `female`: gender of student (1 for female)
+* `read`: score in reading test
+* `write`: score in writing test
+* `math`: score in math test
+* `hon`: status of graduating in honors (1 for honors)
+
+```{r}
+# cek missing value
+anyNA(honors)
+```
+
+```{r}
+# data wrangling
+honors <- honors %>% 
+  mutate_at(.vars=c('female','hon'),
+            .funs=as.factor)
+```
+
+Cara membuat model logistic regression:
+
+`glm(target ~ prediktor, data, family = "binomial")`
+
+### Tanpa Prediktor
+
+```{r}
+honors.logit <- glm(hon~1, honors, family='binomial')
+summary(honors.logit)
+```
+
+**Intercept**: log of odds dari target (student mendapatkan honors (1))
+
+Berikut pembuktiannya:
+
+```{r}
+# peluang
+table(honors$hon)
+```
+
+```{r}
+# log of odds student honors
+logit(49/200)
+```
+
+**Interpretasi**: Log of odds tidak dapat diinterpretasikan. Untuk interpretasi, nilai log of odds kita ubah ke odds.
+
+```{r}
+# log of odds -> odds
+exp(-1.12546)
+```
+
+> Kemungkinan calon siswa mendapat honors 0.32 kali 
+
+> ...
+
+### 1 Prediktor Kategorik
+
+Buat model untuk memprediksi `honors` berdasarkan gender `female`:
+
+```{r}
+honors.logit2 <- glm(hon~female, honors, family='binomial')
+summary(honors.logit2)
+
+```
+
+**Female**: log of *odds ratio* dari student female mendapatkan honors dibandingkan student male mendapatkan honors.
+
+```{r}
+# proportion
+table(female = honors$female, honors = honors$hon)
+```
+
+```{r}
+# peluang
+p_female <- 32 / 109
+p_male <- 17 / 91
+
+# odds 
+o_female <- p_female/(1-p_female)
+o_male <- p_male/(1-p_male)
+
+# log of odds
+log(o_female/o_male) # log dari rasio odds female mendapatkan honors dibagi dengan odd dari male mendapatkan honors
+```
+
+**Intercept**: log of odds dari student male yang mendapatkan honors (basis)
+
+```{r}
+log(o_male)
+```
+
+**Interpretasi:**
+
+```{r}
+# odds female dapat honors
+
+```
+
+> ...
+
+> ...
+
+### 1 Prediktor Numerik
+
+Buat model untuk memprediksi `honors` berdasarkan nilai `math`:
+
+```{r}
+honors.logit3 <- glm(hon~math, honors, family="binomial")
+summary(honors.logit3)
+```
+
+**Intercept**: ...
+
+**Math**: ...
+
+Contoh: 
+
+`hon = -9.79394 + 0.15634 * math`
+
+Student A memiliki nilai math 52, student B 53. Hitung masing-masing log of oddsnya, berapa selisihnya?
+
+```{r}
+# 52 angka mean, dibandingkan dengan 1 angka diatasnya
+# hint: substitusi formula model saja
+# log of odds
+hon52 <--9.79394 + 0.15634 *52
+hon53 <- -9.79394 + 0.15634 *53
+
+hon53-hon52
+```
+
+**Interpretasi:**
+
+```{r}
+# log of odds -> odds
+exp(hon53-hon52)
+```
+
+>
+
+>
+
+>
+
+### Banyak Prediktor
+
+Buat model untuk memprediksi `honors` berdasarkan  gender `female` dan nilai `math`:
+
+```{r}
+honors.logit4 <- glm(hon~math + female, honors, family="binomial")
+summary(honors.logit4)
+
+```
+
+**Interpretasi koefisien:**
+
+cari odds dari masing masing predictor:
+
+```{r}
+# female
+exp( 0.96531)
+# math
+exp(0.16422)
+```
+
+`female` = 2.625601
+
+> kemungkinan female mendapatkan honors 2.63 kali lebih mungkin dari pada pria mendapat honors **ketika nilai matematikanya sama**
+
+`math` = 1.178474
+
+> setiap peningkatan 1 point pada matematika mengakibatkan 1.18 kali lebih mungkin mendapatkan honors **ketika variabel lainnya konstan**
+
+>  
+
+**Aplikasi:**
+
+Final formula: ...
+
+1. Joe adalah seorang male yang nilai math-nya 60, berapa peluang dia mendapatkan honors? Apakah dia akan lulus dengan honors?
+
+```{r}
+table("female"=honors$female,"hon"=honors$hon)
+```
+
+```{r}
+honors.pr <- glm(hon~female+math, honors, family="binomial")
+summary(honors.pr)
+y1 <-  -10.80595 + (0.16422*60)
+cond <- inv.logit(y1)
+ifelse(cond < 0.5, 'tidak honors', 'honors')
+```
+
+2. Wulan adalah seorang female dan nilai math-nya 80, berapa peluang dia mendapatkan honors? Apakah dia akan lulus dengan honors?
+
+```{r}
+y2 <-  -10.80595 + 0.96531 + (0.16422*80)
+cond <- inv.logit(y2)
+
+ifelse(cond < 0.5, 'tidak honors', 'honors')
+```
+
+```{r}
+
+```
+
+Bonus! Apa yang harus dilakukan Husain agar ia dapat lulus dengan predikat honors? ...
+
+```{r}
+husain <- logit(0.51)
+x <-  (husain + 10.80595) / 0.16422
+x
+```
+
+**Summary:**
+
+1. Logistic regression menghasilkan log of odds
+  - fungsi: glm(formula, data, family="binomial")
+
+2. Untuk interpretasi model logistic regression,
+
+- dilakukan: ...
+- menggunakan fungsi: ...
+
+Interpretasi koefisien dapat dilakukan dan berbeda untuk masing-masing kondisi: 
+
+- tanpa prediktor : log of odds dari target variable nya
+- 1 prediktor kategorik : odds rasio dari salah satu levels
+- 1 prediktor numerik : odds dari setiap kenaikan 1 point
+- banyak prediktor : sama seperti biasa namun asumsi prediktor yang lain konstan
+
+Bila koefisien variable:
+
+- positif: meningkatkan
+- negatif: menurunkan
+
+3. Untuk menentukan kelas (klasifikasi) dari hasil logistic regression, nilai log of odds diubah kebentuk probability kemudian ditentukan kelasnya berdasarkan batas tertentu (misal = 0.5).
+
+
+

@@ -1,0 +1,7 @@
+"0","# Please type your code down below"
+"0",""
+"0","# Data Train"
+"0","sms_train <-  sms_train[ , sms_freq]"
+"0",""
+"0","# Data Test"
+"0","sms_test <-  sms_test[ , sms_freq]"

@@ -1,0 +1,2 @@
+"0","# your code here"
+"0","loan %>% filter(default == 'yes') %>% group_by(purpose) %>% summarise(count=n()) %>% arrange(-count)"

@@ -1,0 +1,4 @@
+"0",""
+"0","# impute dengan data sebelum missing"
+"0","dat %>% "
+"0","  mutate(value = na.locf(na.locf(value)))"

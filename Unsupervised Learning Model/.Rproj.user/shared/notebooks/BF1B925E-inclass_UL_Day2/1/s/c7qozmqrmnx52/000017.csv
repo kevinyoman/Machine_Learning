@@ -1,0 +1,3 @@
+"0","# subsetting: baris, kolom"
+"0","# mengambil 4 kolom pertama"
+"0","as.data.frame(pca$x)"

@@ -1,0 +1,5 @@
+"0","# Please type your code down below"
+"0",""
+"0","library(tm)"
+"0",""
+"0","sms.corpus <- VCorpus(VectorSource(sms_clean$v2))"

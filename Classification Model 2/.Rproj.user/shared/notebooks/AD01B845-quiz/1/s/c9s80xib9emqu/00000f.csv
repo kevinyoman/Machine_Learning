@@ -1,0 +1,7 @@
+"0","RNGkind(sample.kind = ""Rounding"")"
+"2","Warning: non-uniform 'Rounding' sampler used"
+"0","set.seed(100)"
+"0","# your code here"
+"0","idx <- sample(nrow(loan), size=nrow(loan)*0.8)"
+"0","data_train <- loan[idx,]"
+"0","data_test <- loan[-idx,]"

@@ -1,0 +1,6 @@
+"0","# your code here"
+"0","library(caret)"
+"0","confusionMatrix(pred_dt, reference = data_test$default, positive='yes')"
+"2","Error in table(data, reference, dnn = dnn, ...) : 
+  all arguments must have the same length
+"

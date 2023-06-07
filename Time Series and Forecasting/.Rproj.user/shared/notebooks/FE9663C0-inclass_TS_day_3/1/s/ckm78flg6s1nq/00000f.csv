@@ -1,0 +1,3 @@
+"0","birth_recomp <- birth_trend + birth_seasonal + birth_error"
+"0",""
+"0","autoplot(birth_recomp) + theme_minimal()"

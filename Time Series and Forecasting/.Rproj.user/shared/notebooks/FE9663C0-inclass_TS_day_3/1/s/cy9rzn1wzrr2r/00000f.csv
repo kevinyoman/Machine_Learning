@@ -1,0 +1,3 @@
+"0","# hasil pola seasonal dari proses decompose"
+"0","birth_dc$seasonal %>% "
+"0","  autoplot()"

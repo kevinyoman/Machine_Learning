@@ -1,0 +1,7 @@
+"0","# versi base"
+"0","copiers_new <- copiers[copiers$Sales < 4000,]"
+"0",""
+"0","# versi dplyr"
+"0","library(dplyr)"
+"0","copiers_new <- copiers %>% "
+"0","            filter(Sales < 4000)"

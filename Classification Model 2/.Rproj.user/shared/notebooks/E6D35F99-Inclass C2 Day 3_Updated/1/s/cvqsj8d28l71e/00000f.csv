@@ -1,0 +1,7 @@
+"0","# Please type your code down below"
+"0",""
+"0","# prediksi ke data train"
+"0","train_pred_tuned <- predict(model_diabetes_tuned, newdata=diab_train_up, type='response')"
+"0",""
+"0","# prediksi ke data test"
+"0","test_pred_tuned <- predict(model_diabetes_tuned, newdata=data_test, type='response')"

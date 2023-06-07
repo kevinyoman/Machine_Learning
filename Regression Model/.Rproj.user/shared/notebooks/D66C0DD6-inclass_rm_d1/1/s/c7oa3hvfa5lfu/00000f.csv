@@ -1,0 +1,6 @@
+"0","# read data copiers
+copiers <- read_csv(""data_input/copiers.csv"")
+"
+"2","Error in read_csv(""data_input/copiers.csv"") : 
+  could not find function ""read_csv""
+"

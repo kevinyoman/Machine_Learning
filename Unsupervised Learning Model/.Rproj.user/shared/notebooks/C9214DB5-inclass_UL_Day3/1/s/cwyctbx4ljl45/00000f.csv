@@ -1,0 +1,3 @@
+"0","library(GGally)"
+"0","# korelasi sebelum PCA"
+"0","ggcorr(ppt, label = T, hjust = 1)"

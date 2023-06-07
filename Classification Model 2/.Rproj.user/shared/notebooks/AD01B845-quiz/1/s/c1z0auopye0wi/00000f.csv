@@ -1,0 +1,3 @@
+"0","library(e1071)"
+"0","# your code here"
+"0","model_naive <- naiveBayes(default~.,data_train_down, laplace = 1)"

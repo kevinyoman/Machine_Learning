@@ -1,0 +1,6 @@
+"0","# Please run the code down below"
+"0","sms_raw <- read.csv(""data_input/spam.csv"","
+"0","                    stringsAsFactors = FALSE,"
+"0","                    encoding = ""UTF-8"")"
+"0",""
+"0","head(sms_raw)"

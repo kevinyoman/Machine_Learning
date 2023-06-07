@@ -1,0 +1,2 @@
+"0","# visualisasi scatter plot"
+"0","plot(copiers$Sales, copiers$Profit)"

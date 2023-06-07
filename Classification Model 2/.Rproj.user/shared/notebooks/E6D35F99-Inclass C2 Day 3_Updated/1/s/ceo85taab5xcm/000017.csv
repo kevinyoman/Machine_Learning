@@ -1,0 +1,4 @@
+"0","diab <- read.csv(""data_input/diabetes.csv"", "
+"0","                 stringsAsFactors = T)"
+"0",""
+"0","head(diab)"

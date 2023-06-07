@@ -1,0 +1,4 @@
+"0","birth_dc <- decompose(birth_ts)
+"
+"2","Error in decompose(birth_ts) : time series has no or less than 2 periods
+"

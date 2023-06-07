@@ -1,0 +1,5 @@
+"0","# Please type your code down below"
+"0","library(ROCR)"
+"0",""
+"0","sms_roc <- prediction(predictions = spam_prob[ , ""spam""], "
+"0","                      labels = ifelse(test = label_test %in% ""spam"", yes = 1, no = 0)) "

@@ -1,0 +1,1270 @@
+---
+title: 'Classification 1 : In-class materials'
+author: "Team Algoritma"
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: true
+    df_print: paged
+    
+---
+
+```{r setup, include=FALSE}
+# clear-up the environment
+rm(list = ls())
+
+# chunk options
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  comment = "#>")
+options(scipen = 9999)
+
+# library
+library(dplyr)
+```
+
+Klasifikasi bertujuan untuk memprediksi kelas (**target variable kategorik**):
+
+* binary classification: 2 kelas
+* multiclass classification: > 2 kelas
+
+# Logistic Regression
+
+## Basic Intuition
+
+### Probability
+
+Pada dasarnya, ketika kita melakukan klasifikasi, kita menghitung **peluang**. 
+
+**Contoh:**
+
+Anda adalah student Algoritma yang akan mengerjakan kuis C1. Pada batch sebelumnya, ada 24 dari 30 student yang berhasil mengerjakan kuis. Apakah Anda akan lulus pada kuis C1 ini?
+
+```{r}
+# peluang
+
+24/30
+
+```
+```{r}
+# peluang tidak lulus
+
+1- 0.8
+
+```
+```{r}
+# tentukan kelas
+
+peluang <- 4/30
+
+ifelse(peluang > 0.5 , yes = "lulus", no = "tidak lulus")
+
+```
+
+Berapa range peluang?
+
+* min: 0
+* max: 1
+
+Berapa range hasil prediksi model regresi?
+
+* min: -inf
+* max: inf
+
+Dibutuhkan suatu jembatan agar regression dapat digunakan untuk memprediksi peluang. Jembatan itu adalah **Odds** dan **Log of Odds**.
+
+### Odds & Log of Odds
+
+Odds adalah bentuk lain dari peluang, yaitu perbandingan peluang antara **peluang kejadian terjadi/peluang kejadian tidak terjadi**.  
+
+$$\frac{p}{(1-p)}$$ 
+
+`p` = peluang suatu kejadian terjadi
+
+**Contoh 1:**
+
+Berapa odds dari Anda lulus mengerjakan kuis C1?
+
+```{r}
+# peluang = 0.8
+# peluang tidak lulus = 0.2
+# odds
+0.2/0.8
+```
+
+Interpretasi: Kejadian seseorang lulus kuis adalah **4 KALI lebih mungkin** dibandingkan tidak lulus kuis. 
+
+Dapat dianalogikan juga, bila odds = 4 (4:1), maka bila ada 4 orang lulus ada yang 1 tidak lulus.
+
+**Contoh 2:** 
+
+Anda hendak berpergian menggunakan pesawat dari Soekarno Hatta Airport. Bila diketahui dari 100 penerbangan di Soekarno Hatta, terdapat 25 pesawat `Delay`. Berapa odds pesawat Anda `On Time`?
+
+```{r}
+# peluang
+p <- 75/100
+# odds
+p/(1-p)
+```
+
+Interpretasi:
+
+* kemungkinan pesawat on time 3 kali lebih mungkin
+
+Note: Kalau oddsnya 1 berarti peluangnya? 0.5
+
+Berapa range nilai dari odds? 
+
+```{r}
+# odds: p/1-p
+# min
+0/(1-0)
+# max
+1/(1-1)
+```
+
+* Probability: 0 1
+* Odds       : 0 Inf
+
+Log of odds adalah nilai odds yang dilogaritmikkan:
+
+\(logit(p) = log(\frac{p}{1-p})\)
+
+```{r}
+# log of odds - lulus kuis
+log(4)
+# log of odds - pesawat on time
+log(3)
+```
+
+Berapa range nilai log of odds?
+
+```{r}
+# min
+log(0/(1-0))
+# max
+log(1/(1-1))
+```
+
+* Probability: 0 1
+* Odds       : 0 inf
+* Log of odds: -inf inf
+
+Odds dan log of odds mampu menjembatani antara nilai yang dihasilkan oleh model regresi, ke rentang nilai peluang. **Logistic regression menghasilkan Log of Odds**. Nilai log of odds dapat dikembalikan ke bentuk odds (untuk diinterpretasikan) dan peluang sehingga dapat digunakan untuk klasifikasi.
+
+```{r}
+# log of odds -> odds
+odds <- exp(1.386294)
+odds
+```
+
+```{r}
+# odds -> peluang dengan `odds/(odds+1)`
+odds/(odds+1)
+```
+
+Terdapat cara lain:
+
+* `logit()`: peluang -> log of odds
+* `inv.logit()`: log of odds -> peluang
+
+```{r}
+library(gtools)
+
+# peluang -> log of odds dengan `logit()`
+logit(0.8)
+```
+
+```{r}
+# log of odds -> peluang dengan `inv.logit()`
+inv.logit(1.386294)
+```
+
+Fungsi `inv.logit()` ini juga biasa disebut *sigmoid function*.
+
+```{r}
+# sigmoid function
+curve(inv.logit(x), from = -10, to=10, 
+      xlab = "Log of Odds", 
+      ylab = "Peluang")
+```
+
+## `glm()` & Interpretation
+
+Anda adalah seorang analis performa student di universitas. Anda ditugaskan untuk memprediksi status kelulusan siswa dengan honors (cumlaude).
+
+```{r}
+# read & inspect data
+honors <- read.csv("data_input/sample.csv") %>% 
+  select(-femalexmath)
+
+glimpse(honors)
+```
+
+Deskripsi kolom:
+
+* `female`: gender of student (1 for female)
+* `read`: score in reading test
+* `write`: score in writing test
+* `math`: score in math test
+* `hon`: status of graduating in honors (1 for honors)
+
+```{r}
+# cek missing value
+anyNA(honors)
+```
+
+```{r}
+# data wrangling
+honors <- honors %>% 
+  mutate(female = as.factor(female),
+         hon = as.factor(hon))
+```
+
+Cara membuat model logistic regression:
+
+`glm(target ~ prediktor, data, family = "binomial")`
+
+### Tanpa Prediktor
+
+```{r}
+honors.logit <- glm(formula = hon ~ 1, data = honors, family = "binomial")
+
+summary(honors.logit)
+```
+
+**Intercept**: log of odds dari target (student mendapatkan honors (1))
+
+Berikut pembuktiannya:
+
+```{r}
+# peluang
+table(honors$hon)
+```
+
+```{r}
+# log of odds student honors
+logit(49/200)
+```
+
+**Interpretasi**: Log of odds tidak dapat diinterpretasikan. Untuk interpretasi, nilai log of odds kita ubah ke odds.
+
+```{r}
+# log of odds -> odds
+exp(-1.12546)
+```
+
+> berarti kemungkinan calon siswa mendapatkan honors 0.32 kali lebih mungkin dari pada tidak mendapatkan honors
+
+> kemungkinan calon siswa lebih kecil mendapatkan honor dari pada tidak mendapatkan honors
+
+### 1 Prediktor Kategorik
+
+Buat model untuk memprediksi `honors` berdasarkan gender `female`:
+
+```{r}
+honors.logit2 <- glm(formula = hon ~ female  , data = honors , family = "binomial")
+
+summary(honors.logit2)
+```
+
+**Female**: log of *odds ratio* dari student female mendapatkan honors dibandingkan student male mendapatkan honors.
+
+```{r}
+# proportion
+table(female = honors$female, honors = honors$hon)
+```
+
+```{r}
+# peluang
+p_female <- 32/(32+77)
+p_male <- 17/91
+
+# odds 
+o_female <- p_female / (1-p_female)
+o_male <- p_male / (1-p_male)
+
+# log of odds
+log(o_female/o_male) 
+# log dari odds female mendapakan honors dibagi dengan log dari odd male mendapakan honors
+```
+
+log dari odds fema
+
+**Intercept**: log of odds dari student male yang mendapatkan honors (basis)
+
+```{r}
+log(o_male)
+```
+
+**Interpretasi:**
+
+```{r}
+# odds female dapat honors
+exp(0.5927822)
+
+```
+
+> kemungkinan perempuan mendapatkan honors 1.8 kali lebih mungkin dari pada pria mendapatkan honors
+
+> ...
+
+### 1 Prediktor Numerik
+
+Buat model untuk memprediksi `honors` berdasarkan nilai `math`:
+
+```{r}
+honors.logit3 <- glm(formula = hon ~ math, data = honors, family = "binomial")
+
+summary(honors.logit3)
+```
+
+**Intercept**: ...
+
+**Math**: ...
+
+Contoh: 
+
+`hon = -9.79394 + 0.15634 * math`
+
+Student A memiliki nilai math 52, student B 53. Hitung masing-masing log of oddsnya, berapa selisihnya?
+
+```{r}
+# hint: substitusi formula model saja
+# log of odds
+hon52 <-  -9.79394 + 0.15634 * 52
+hon53 <- -9.79394 + 0.15634 * 53
+
+hon53-hon52
+```
+
+**Interpretasi:**
+
+```{r}
+# log of odds -> odds
+
+exp(hon53-hon52)
+```
+
+> dengan menigkatnya 1 point dari nilai matematika maka siswa 1.17 kali lebih mungkin mendapatkan honors 
+
+
+### Banyak Prediktor
+
+Buat model untuk memprediksi `honors` berdasarkan  gender `female` dan nilai `math`:
+
+```{r}
+honors.logit4 <- glm(hon ~ female + math, data = honors , family= "binomial")
+
+
+summary(honors.logit4)
+```
+
+**Interpretasi koefisien:**
+
+cari odds dari masing masing predictor:
+
+```{r}
+# female
+exp(0.96531 )
+
+# math
+exp(0.16422)
+```
+
+`female` = 2.625601
+
+> kemungkinan female mendapatkan honors 2.63 kali lebih mungkin dari pada pria mendapatkan honors **ketika nilai matematikanya sama/konstan**
+
+`math` = 1.178474
+
+> setiap pengingkatan 1 point pada matematika mengakibatkan 1.18 kali lebih mungkin mendapatkan honors **ketika variable lainnya konstan**
+
+> jika seorang siswa memiliki nilai 1 point lebih tinggi nilai matematikanya dari siswa lainnya maka dia akan 1.18 kali lebih mungkin mendapatkan honors ketika varible lainnya konstan
+
+**Aplikasi:**
+
+Final formula: y = -10.80595 + 0.96531 * female1 + 0.16422 * math
+
+1. Joe adalah seorang male yang nilai math-nya 60, berapa peluang dia mendapatkan honors? Apakah dia akan lulus dengan honors?
+
+```{r}
+joe <- -10.80595 + 0.96531 * 0 + 0.16422 *60
+
+joe
+```
+
+```{r}
+inv.logit(joe)
+```
+
+probability untuk dia lulus dengan honors adalah 27.8 %
+
+```{r}
+ifelse(inv.logit(joe) < 0.5 , "tidak honors", "honors" )
+```
+
+
+2. Wulan adalah seorang female dan nilai math-nya 80, berapa peluang dia mendapatkan honors? Apakah dia akan lulus dengan honors?
+
+```{r}
+wulan <- -10.80595 + 0.96531 * 1 + 0.16422 *80
+```
+
+```{r}
+inv.logit(wulan)
+```
+
+Bonus! Apa yang harus dilakukan Husain agar ia dapat lulus dengan predikat honors? ...
+
+```{r}
+inv.logit(-10.80595 + 0.96531 * 0 + 0.16422 *90)
+```
+
+**Summary:**
+
+1. Logistic regression menghasilkan log of odds
+  - fungsi: `glm( formula, data, family = "binomial")`
+
+2. Untuk interpretasi model logistic regression,
+
+- dilakukan: dirubah ke odds
+- menggunakan fungsi: `exp()`
+
+Interpretasi koefisien dapat dilakukan dan berbeda untuk masing-masing kondisi: 
+
+- tanpa prediktor : log of odds dari target variable nya
+- 1 prediktor kategorik : odds rasio dari salah satu levels
+- 1 prediktor numerik : odds dari setiap kenaikan 1 point
+- banyak prediktor : sama seperti biasa namun asumsi prediktor yang lain konstan
+
+Bila koefisien variable:
+
+- positif: meningkatkan kemungkinan ke target variable 1
+- negatif: menurunkan kemungkinan ke target variable 1
+
+3. Untuk menentukan kelas (klasifikasi) dari hasil logistic regression, nilai log of odds diubah kebentuk probability kemudian ditentukan kelasnya berdasarkan batas tertentu (misal = 0.5).
+
+___end of day 1___ 
+
+### Perfect Separation
+
+* **Null deviance**: deviasi model saat tanpa prediktor (model terburuk).
+* **Residual deviance**: deviasi model saat menggunakan prediktor.
+
+Umumnya semakin banyak prediktor maka residual deviance akan semakin kecil.
+```{r}
+summary(honors.logit)
+```
+
+
+```{r}
+# null deviance
+honors.logit$null.deviance
+```
+
+```{r}
+# residual deviance
+honors.logit$deviance # wo/ predictor
+honors.logit2$deviance # w/ female
+honors.logit3$deviance # w/ math
+honors.logit4$deviance # w/ female + math
+```
+
+Mari buat model `honors.logit5` untuk memprediksi `honors` berdasarkan semua prediktor yang ada:
+
+```{r message=TRUE, warning=TRUE}
+honors.logit5 <- glm(hon ~ . , data = honors, family = "binomial")
+summary(honors.logit5)
+```
+
+NOTE: 
+
+* *glm.fit: fitted probabilities numerically 0 or 1 occurred* -> warning bahwa bisa dihasilkan probability yang tepat 1 atau 0 (indikasi kondisi **perfect separation**)
+* *glm.fit: algorithm did not converge* -> warning bahwa algoritmanya tidak mencapai kondisi stabil hingga iterasi ke-25 (default), dapat terjadi salah satunya karena kondisi **perfect separation**.
+
+**Perfect Separation** adalah sebuah kondisi dimana ada 1 variabel yang dapat memisahkan kelas target secara sempurna. Cara mendeteksi:
+
+* Lihat dari estimate, kalau ada yang paling beda 
+* p value, kalau p value terlalu banyak yang tidak signifikan 
+* null dan residual deviance. 
+* iteration lebih dari 25
+
+```{r}
+# log of odds -> odds
+
+data.frame(odds = exp(honors.logit5$coefficients)) 
+
+```
+
+Pada kasus ini, nilai write dapat memisahkan kelas honor dengan sempurna:
+
+```{r}
+table(honors$hon, honors$write)
+```
+
+```{r}
+plot(honors$hon, honors$write)
+```
+
+> Tidak disarankan menggunakan model dengan perfect separation, karena model amat bias pada salah satu variable dan tidak mempertimbangkan variable lain. Hal ini dapat membuat model tidak akurat (buruk) dalam memprediksi ke data baru.
+
+Apa yang kita lakukan bila bertemu kondisi perfect separation:
+
+* kalau kasus seperti ini kita terima, tidak usah membuat machine learning, cukup `ifelse` saja.
+* kalau kasus ini tidak kita terima, maka jangan gunakan variabel ini sebagai prediktor.
+* observasi (data) nya kita tambah
+
+```{r}
+# revisi model
+honors.logit6 <- glm(hon ~ female + read + math , data = honors, family = "binomial")
+summary(honors.logit6)
+```
+
+### AIC
+
+AIC = Jumlah informasi yang hilang. Semakin kecil AIC, semakin baik model.
+
+```{r}
+honors.logit$aic # wo/ predictor
+honors.logit2$aic # w/ female
+honors.logit3$aic # w/ math
+honors.logit4$aic # w/ female + math
+honors.logit6$aic # w/ all predictor except write
+```
+
+```{r}
+honors.logit5$aic # w/ write 
+```
+
+**Important Notes:**
+
+Dalam menseleksi model, model yang baik adalah:
+
+* model dengan nilai AIC rendah
+* model tanpa kondisi Perfect Separation
+
+## Assumption
+
+Logistic Regression menganut 3 asumsi:
+
+* **Linearity of Predictor & Log of Odds**: cara interpretasi model mengacu pada asumsi ini (contoh: untuk variabel numerik, peningkatan 1 nilai akan meningkatkan log of odds)
+* **Multicollinearity**: antar prediktor tidak saling berkorelasi kuat (hingga nilai 1 / -1) -> uji `vif()`
+* **Independence of Observations**: antar observasi saling independen & tidak berasal dari pengukuran berulang (repeated measurement) -> kita harus ambil data secara random sampling
+
+Asumsi logistic regression menuntut kita untuk memahami data secara mendalam dan memastikan data sudah siap dipakai untuk membuat model. Coba analisis kasus di bawah:
+
+**Dive Deeper**
+
+Berikut data penerbangan pesawat dalam `flight_sm.csv`:
+
+```{r}
+flight <- read.csv("data_input/flight_sm.csv") %>% 
+  mutate(DepDel15 = as.factor(DepDel15))
+glimpse(flight)
+```
+
+Dekspripsi kolom:
+
+* `Year, Month, DayofMonth, DayofWeek`: self-explanatory
+* `Carrier`: maskapai
+* `CRSDepTime & CRSArrTime`: jadwal departure & arrival (hhmm)
+* `DepDel15`: status delay (1 = delay)
+* `OriginState, DestState`: lokasi keberangkatan & tujuan
+
+Buat model `flight.model` untuk memprediksi `DepDel15` berdasarkan `Month` + `DayofWeek`, kemudian tampilkan summary-nya:
+
+```{r}
+flight.model <- glm(DepDel15 ~ Month + DayofWeek , data = flight, family = "binomial")
+  
+summary(flight.model)
+```
+
+```{r}
+flight_clean <- flight %>% 
+  mutate(Month = as.factor(Month),
+         DayofWeek = as.factor(DayofWeek))
+
+glimpse(flight_clean)
+```
+```{r}
+flight.model_baru <- glm(DepDel15 ~ Month + DayofWeek , data = flight_clean, family = "binomial")
+  
+summary(flight.model_baru)
+```
+
+
+# Classification Workflow
+
+1. Business Question
+2. Read Data
+3. Data Wrangling
+4. EDA  (untuk logistic regression selesaikan pengecekan asumsi disini)
+5. Cross Validation
+6. Data Pre-Processing
+7. Build Model
+8. Predict
+9. Model Evaluation
+10. Model Tuning -> Final Model
+
+**Studi Kasus: Credit Risk Analysis**
+
+Buat model untuk memprediksi peluang customer akan gagal bayar pinjaman (loan default), untuk mengindikasikan apakah customer tersebut baik atau tidak untuk diberikan pinjaman.
+
+### Read Data
+
+```{r}
+loans <- read.csv("data_input/loan2017Q4.csv", stringsAsFactors = T)
+```
+
+### Data Wrangling
+
+```{r}
+glimpse(loans)
+```
+
+Target: not_paid (paid = 0, not_paid = 1)
+
+Adakah variabel yang tipe datanya belum sesuai?
+
+* grdCtoA
+* not_paid
+* verified
+
+
+Adakah variabel yang dapat dibuang?
+
+* verified_status
+* grade 
+* annual_inc
+
+```{r}
+library(dplyr)
+
+loan_clean <- loans %>% 
+  select(-c(verification_status, grade, annual_inc)) %>% 
+  mutate(grdCtoA = as.factor(grdCtoA),
+         not_paid = as.factor(not_paid),
+         verified = as.factor(verified))
+
+glimpse(loan_clean)
+
+```
+
+### Exploratory Data Analysis
+
+**Cek missing value**
+
+```{r}
+anyNA(loan_clean)
+```
+
+**Cek persebaran/pattern data**
+
+```{r}
+# explore with summary
+
+summary(loan_clean)
+```
+
+Insight: 
+- 
+
+Literature: Higher debt-to-income ratio (dti) and amount of credit card debts are both associated with a greater likelihood of loan defaults.
+
+```{r}
+# numeric predictor vs target variable
+boxplot(loan_clean$dti , loan_clean$not_paid, ylim = c(0,10))
+```
+
+```{r}
+table(loan_clean$grdCtoA, loan_clean$not_paid)
+```
+
+
+Insight: 
+
+**Cek class-imbalance** 
+
+```{r}
+prop.table(table(loan_clean$not_paid))
+```
+
+Proporsi yang seimbang penting agar model dapat mempelajari karakteristik kelas positif maupun negatif secara seimbang, tidak belajar dari satu kelas saja. Hal ini mencegah model dari *hanya baik memprediksi 1 kelas saja*. 
+
+Proporsi yang imbalance umumnya 90/10 atau 95/5.
+
+Kalau datanya imbalance:
+
+- tambah data
+- downSampling -> buang observasi dari kelas mayoritas, sehingga seimbang
+- upSampling -> duplicate observasi dari kelas minoritas, sehingga seimbang
+
+akan dipelajari di C2
+
+___end of day 2___
+
+### Cross Validation
+
+- split data menjadi 2 bagian yaitu **data train** dan **data test**. 
+- data train akan digunakan untuk training model.
+- data test akan digunakan untuk pengujian performa model. model akan diuji untuk memprediksi data test. hasil prediksi dan data aktual dari data test akan dibandingkan untuk validasi performa model.
+
+Analogi:
+
+* 100 soal
+* 80 soal saya pakai untuk belajar (data train)
+* 20 soal saya pakai untuk ujian (data test)
+
+tujuan dari cross validation adalah untuk mengetahui seberapa baik model yg sudah kita buat.
+
+```{r}
+# # intuisi set seed: mengunci random number kita
+
+set.seed(417) # pakai set.seed -> random number dikunci, hasil sampling selalu sama
+sample(c("Angela", "Anthony", "Rizky", "Kevin"), 2)
+```
+
+```{r}
+RNGkind(sample.kind = "Rounding") # tambahan khusus u/ R 3.6 ke atas 
+set.seed(417) # mengunci random number yang dipilih
+
+# index sampling
+index <- sample(x = nrow(loan_clean) , size = nrow(loan_clean) * 0.8)
+
+# splitting
+loans.train <- loan_clean[index , ]
+loans.test <- loan_clean[-index , ]
+```
+
+NOTE: Proporsi 0.8/0.2 tidak mutlak, tergantung kebutuhan kita. Umumnya yang lebih banyak adalah untuk data train.
+
+```{r}
+# re-check class imbalance
+prop.table(table(loans.train$not_paid))
+prop.table(table(loans.test$not_paid))
+```
+
+proporsi kelas yang balance penting untuk data train karena kita akan melatih model menggunakan data train.
+
+```{r}
+library(rsample)
+
+set.seed(417)
+
+index_1 <- initial_split(data = loan_clean, prop = 0.8 , strata ="not_paid")
+
+loan_train <- training(index_1)
+loan_test <- testing(index_1)
+  
+prop.table(table(loan_train$not_paid))
+prop.table(table(loan_test$not_paid))
+```
+
+
+### Build Model
+
+Buatlah model logistic regression untuk memprediksi status loan (not_paid). Silahkan lakukan feature selection berdasarkan pertimbangan bisnis atau/dan statistik!
+
+pakai data `loans.train`
+
+```{r}
+model.loans <- glm(not_paid ~ installment + delinq_2yrs +  home_ownership + log_inc + verified + grdCtoA , data = loans.train, family = "binomial" )
+  
+```
+
+```{r}
+summary(model.loans)
+```
+
+Pilih masing-masing 1 untuk prediktor kategorik dan prediktor numerik, kemudian interpretasikan:
+
+```{r}
+# numerik:
+exp(-0.3413549)
+
+# kategorik:
+
+exp(-0.4525553)
+
+```
+
+> setiap peningkatan 1 point dari log_inc debitur akan 0.71 kali lebih mungkin untuk not paid kelas 1 (gagal bayar).
+
+> untuk debitur yang memiliki grad B dan A 0.64 kali lebih mungkin untuk notpaid kelas 1 (gagal bayar)
+
+### Predict
+
+`predict(model, newdata, type)`
+
+pada `type` terdapat pilihan:
+
+* link: menghasilkan log of odds
+* response: menghasilkan peluang
+
+Prediksi log of odds `not_paid` untuk 6 data teratas:
+
+```{r}
+predict(object = model.loans , 
+        newdata = loans.test[1:6,], 
+        type = "link")
+```
+
+Prediksi probability `not_paid` untuk 6 data teratas:
+
+```{r}
+predict(object = model.loans , 
+        newdata = loans.test[1:6,], 
+        type = "response")
+```
+
+**Dive Deeper**
+
+Lakukan prediksi probability `not_paid` untuk data loans.test dan disimpan pada kolom baru bernama `pred.Risk`.
+
+```{r}
+loans.test$pred.Risk <- predict(object = model.loans , 
+        newdata = loans.test, 
+        type = "response")
+```
+
+Klasifikasikan data loans.test berdasarkan `pred.Risk` dan simpan pada kolom baru bernama `pred.Label`.
+
+```{r}
+# ifelse(kondisi, benar, salah)
+
+loans.test$pred.Label <- ifelse(loans.test$pred.Risk > 0.5 , yes = 1 , no = 0)
+
+# pastikan kelas target (aktual dan prediksi) bertipe factor
+
+loans.test$pred.Label <- as.factor(loans.test$pred.Label)
+
+head(loans.test)
+
+```
+
+**Note:**
+
+Penentuan label yang menjadi angka 1 pada **model logistic regression** adalah berdasarkan levels.
+
+kelas "0", "1" -> basis = 0, 
+                  peluang mendekati 0 -> 0
+                  peluang mendekati 1 -> 1
+
+kelas "honors" "non-honors" -> basis = honors
+                            peluang mendekati 0 -> honors
+                            peluang mendekati 1 -> non-honors
+
+```{r}
+# lihat hasil prediksi
+loans.test %>% 
+  select(not_paid, pred.Risk, pred.Label) %>% 
+  head(6)
+```
+
+**Summary**
+
+1. Seleksi model logistic regression:
+
+- AIC : aic yang paling kecil
+- Perfect separator -> kolom yang sangat menentukan hasil prediksi, tidak bersinggungan
+
+2. Asumsi model logistic regression:
+
+- linearity  logit
+- multicol
+- independence of observaton
+
+3. Workflow klasifikasi:
+ 
+* business question
+* read data
+* data wrangling
+* EDA
+* Cross validation
+* Data Preprocessing
+* build model
+* predict
+* evaluasi
+* tuning model
+
+### Model Evaluation
+
+Setelah dilakukan prediksi menggunakan model, masih ada saja prediksi yang salah. Pada klasifikasi, kita mengevaluasi model berdasarkan **confusion matrix**:
+
+* true positive (TP): prediksi positif; aktual positif
+* true negative (TN): prediksi negatif; aktual negatif 
+* false positive (FP): prediksi positif; aktual negatif
+* false negative (FN): prediksi negatif; aktual positif
+
+```{r, out.width = "40%", echo = FALSE, fig.align = "center"}
+knitr::include_graphics("img/tnfp.PNG")
+```
+
+```{r}
+library(caret)
+
+confusionMatrix(data = loans.test$pred.Label, reference = loans.test$not_paid , positive = "1")
+
+```
+
+4 metrics performa model: Accuracy, Sensitivity/Recall, Precision, Specificity 
+
+**Accuracy**
+
+Seberapa banyak yang benar diprediksi dari keseluruhan data (positif maupun negatif).
+
+Ketika data tidak balance (kelas 0 & 1), Accuracy tidak dapat dijadikan sebagai tolak ukur
+
+`TP+TN/TOTAL`
+
+```{r}
+(95 + 93) / nrow(loans.test)
+```
+
+Digunakan ketika:
+
+- kelas target sama penting
+- data balance
+
+Ada kondisi ketika accuracy bukanlah metrics terpenting. Umumnya ketika:
+
+- kita mementingkan salah satu kelas (misal, kelas positif)
+- data kita imbalance
+
+Saat kita mementingkan kelas tertentu (kelas positif), maka kita dapat memilih antara menggunakan metrics Recall / Precision: 
+
+**Sensitivity/Recall**
+
+Seberapa banyak yang **benar diprediksi positif**, dari yang **re**ality-nya (aktualnya) positif.
+
+- Tidak mau ada Positif yang tidak terprediksi positif
+- Recall tinggi, lebih dibutuhkan oleh customer
+
+`TP/(TP+FN)`
+
+```{r}
+95 / (95 + 56)
+```
+
+**Pos Pred Value/Precision**
+
+Seberapa banyak yang **benar diprediksi positif**, dari yang di**pre**diksi positif. 
+
+- Tidak mau ada prediksi kelas positif yang salah
+-Precision tinggi, lebih dibutuhkan oleh perusahaan
+
+`TP/(TP+FP)`
+
+```{r}
+95/ (95 + 68)
+```
+
+Untuk memahaminya mari berdiskusi:
+
+**Diskusi**
+
+ROLE PLAY:
+
+1. Seorang dokter ingin mendiagnosa pasien kanker menggunakan model machine learning. Pasien yang kanker akan diarahkan untuk pemeriksaan lanjutan. Untuk melihat kebaikan model, metrics mana yang lebih kita utamakan? 
+
+* Target variabel = kanker/non-kanker
+* Kelas positif = kanker
+* Metrics = ...
+
+2. Kita ingin membuat model prediksi untuk mengklasifikasikan e-mail spam/ham. Metrics mana yang lebih kita utamakan?
+  
+* Target variabel = spam/ham
+* Kelas positif = spam
+* Metrics = ...
+
+3. Bila ada seorang **seller** dan **bos**nya yang hendak menawarkan produk perusahaan ke 1000 calon pelanggan. Ingin dibuat model prediksi dimana positive = pelanggan membeli produk. Maka siapa yang mementingkan recall, siapa yang mementingkan precision, dan mengapa?
+
+**Bos**: ..., karena ...
+
+**Seller**: ..., karena ...
+
+**Specificity**
+
+Seberapa banyak yang **tepat diprediksi negatif**, dari yang **reality-nya negatif**. Jarang dipakai karena kita tidak sering fokus pada kelas negatif.
+
+`TN/(TN+FP)`
+
+```{r}
+93/(93+68)
+```
+
+4. Metrics yang baik untuk kasus loans adalah? (positif: not paid) 
+
+ recall
+
+Bila hasil evaluasi (nilai metrics) belum memuaskan, dapat dilakukan **Model Tuning**:
+
+1. ganti prediktor
+2. ubah data pre-processingnya: misal upsample/downsample, scaling dll.
+3. ganti modelnya (pakai model yang lebih robust)
+4. ganti treshold prediction (tidak terlalu dianjurkan, karena bisa memaksakan):
+  * geser mendekati 0: meningkatkan recall
+  * geser mendekati 1: meningkatkan precision
+
+```{r}
+# label baru dari threshold baru
+loans.test$pred.Label <- ifelse(loans.test$pred.Risk > 0.4, 1, 0)
+loans.test$pred.Label <- as.factor(loans.test$pred.Label)
+# confusion matrix
+confusionMatrix(loans.test$pred.Label, loans.test$not_paid, positive = '1')
+```
+
+# k-NN
+
+k-NN adalah *K-nearest neighboor*. Metode ini akan mengkasifikasi data baru dengan membandingkan karakteristik data baru (data test) dengan data yang ada (data train). Kedekatan karakteristik tersebut diukur dengan **Euclidean Distance** hingga didapatkan **jarak**. Kemudian akan dipilih **k** tetangga terdekat dari data baru tersebut, kemudian ditentukan kelasnya menggunakan majority voting.
+
+```{r, out.width = "80%", echo = FALSE, fig.align = "center"}
+knitr::include_graphics("img/KNN.png")
+```
+
+## Picking Optimum k
+
+* jangan terlalu besar: pemilihan kelas hanya berdasarkan kelas yang dominan dan mengabaikan pola kecil yang ternyata penting. 
+* jangan terlalu kecil: rentan mengklasifikasikan data baru ke kelas outlier.
+* **k optimum** adalah akar dari jumlah data kita: `sqrt(nrow(data))`
+* untuk menghindari seri ketika majority voting:
+  - k harus ganjil bila jumlah kelas target genap
+  - k harus genap bila jumlah kelas target ganjil 
+  - k tidak boleh angka kelipatan jumlah kelas target
+* bila hasil majority voting seri, maka kelas akan dipilih secara random.
+
+## Karakteristik k-NN
+
+* tidak membuat model: langsung mengklasifikasi *saat itu juga*, tidak belajar dari data, setiap ingin mengklasifikasi harus menyediakan data train lagi.
+* tidak ada asumsi
+* dapat memprediksi multiclass
+* baik untuk prediktor numerik (karena mengklasifikasikan berdasarkan jarak), tidak baik untuk prediktor kategorik
+* robust
+* tidak interpretable
+
+## Breast Cancer Prediction 
+
+### Business Question 
+
+Kanker payudara adalah kanker yang paling umum menyerang wanita di dunia. Kanker payudara dapat berupa kanker jinak (benign) atau sudah ganas (malignant). Kanker ganas dapat menyebar ke organ-organ tubuh lainnya. Ingin dibuat model prediksi untuk memprediksi apakah kanker masih jinak (benign) atau sudah ganas (malignant).
+
+```{r, out.width = "80%", echo = FALSE, fig.align = "center"}
+knitr::include_graphics("img/histology-examples.png")
+```
+
+### Read Data
+
+```{r}
+wbcd <- read.csv("data_input/wisc_bc_data.csv")
+head(wbcd)
+```
+
+```{r}
+# inspect data
+wbcd_clean <- wbcd %>% select(-id)
+wbcd_clean$diagnosis <- as.factor(wbcd_clean$diagnosis)
+```
+
+Variabel target: diagnosis
+
+B = benign
+M = Malignant
+
+### Data Wrangling 
+
+```{r}
+
+```
+
+### Exploratory Data Analysis
+
+* **cek proporsi kelas**
+
+```{r}
+prop.table(table(wbcd_clean$diagnosis))
+```
+
+Insight: .data masih balance, dibawah 70 30
+
+* **cek range nilai tiap variable prediktor**: range harus sama karena knn mengklasifikasikan berdasarkan **jarak**. kalau ada nilai yang tinggi sendiri dibanding yang lain, maka variable tersebut akan sangat mempengaruhi hasil klasifikasi dan mengabaikan variable yang lain. 
+
+```{r}
+# cek range nilai tiap variable
+summary(wbcd_clean)
+```
+
+Range tiap variabel berbeda sehingga perlu dilakukan feature rescaling di tahap *data pre-processing*.
+
+### Cross Validation
+
+```{r}
+RNGkind(sample.kind = "Rounding")
+set.seed(417)
+
+idx <- sample(nrow(wbcd_clean),nrow(wbcd_clean)*0.8)
+
+wbcd_train <- wbcd_clean[idx,]
+wbcd_test <- wbcd_clean[-idx,]
+
+```
+
+```{r}
+# recheck class balance
+prop.table(table(wbcd_train$diagnosis))
+```
+
+Insight: proporsi masih termasuk balance. Bila di balancekan, hasil model tidak berpengaruh banyak
+
+### Data Pre-processing
+
+#### Scaling
+
+Scaling bisa menggunakan *min-max normalization* atau *z-score standarization*.
+
+1. Min-Max Normalization
+
+Rumus = x-min(x) / max(x)-min(x)
+
+```{r}
+normalize <- function(x){
+  return ( 
+    (x - min(x))/(max(x) - min(x)) 
+           )
+}
+```
+
+```{r}
+# contoh:
+normalize(c(1,2,3,4,5)) # memampatkan range nilai menjadi 0-1
+```
+
+-> digunakan ketika tau angka pasti min dan max nya. misalnya nilai ujian matematika pasti nilai min-max nya 0 - 100.
+
+2. Z-score Standarization: dapat menggunakan function `scale()`
+
+Rumus = x-mean(x) / sd(x)
+
+```{r}
+# contoh:
+scale(c(1,2,3,4,5)) # data kita seberapa menyimpang (sd) dari pusatnya (mean)
+```
+
+-> digunakan ketika tidak diketahui angka min dan max pastinya. misalnya temperature bisa dari kisaran -inf s.d +inf
+
+Untuk k-NN, dipisahkan antara prediktor dan label (target variabelnya).
+
+```{r}
+# prediktor
+wbcd_train_x <- wbcd_train[ ,-1]
+
+wbcd_test_x <- wbcd_test[,-1]
+
+# target
+wbcd_train_y <- wbcd_train$diagnosis
+
+wbcd_test_y <- wbcd_test$diagnosis
+```
+
+Data prediktor akan discaling menggunakan z-score standarization. Data test juga harus discaling menggunakan parameter dari data train (karena menganggap data test adalah unseen data).
+
+```{r}
+# scaling data prediktor
+wbcd_train_xs <- scale(wbcd_train_x)
+wbcd_test_xs <- scale(wbcd_test_x, 
+                      center=attr(wbcd_train_xs,"scaled:center"), 
+                      scale=attr(wbcd_train_xs,"scaled:scale"))
+```
+
+k-NN tidak membuat model sehingga langsung ke predict.
+
+### Predict
+
+```{r}
+# find optimum k
+sqrt(nrow(wbcd_train_xs))
+```
+
+* jumlah kelas target: 2
+* k: 19 21 23
+
+```{r}
+library(class) # package untuk fungsi `knn()`
+
+wbcd_pred <- ...
+```
+
+```{r}
+# cek hasil prediksi
+
+```
+
+### Model evaluation
+
+```{r}
+# confusion matrix
+library(caret)
+
+```
+
+# Logistic Regression & k-NN Comparation
+
+```{r, out.width = "80%", echo = FALSE, fig.align = "center"}
+knitr::include_graphics("img/karakter.PNG")
+```
+
+**Summary**
+
+**Classification Workflow**
+
+* Predict untuk logistic regression dengan fungsi ...
+* Model Evaluation 
+  - Confusion Matrix digunakan untuk evaluasi model dan menampilkan:
+    - TP: 
+    - TN: 
+    - FP: 
+    - FN: 
+  - Metrics evaluasi model pada klasifikasi:
+    - Accuracy:
+      - 
+      - 
+    - Sensitivity/Recall:
+      - 
+      - 
+    - Precision:
+      - 
+      - 
+    - Specificity:
+  - Nilai Recall & Precision seringkali trade off. Kita memilih Recall/Precision tergantung kebutuhan bisnis.
+* Model Tuning -> Final Model
+  - pakai prediktor lain / data pre-processing lain
+  - gunakan algoritma yang lebih robust
+  - tuning treshold:
+    - geser mendekati 0: meninggikan recall
+    - geser mendekati 1: meninggikan precision
+
+**k-NN:**
+
+1. k-NN mengkasifikasi berdasarkan **jarak**
+  - menghitung jarak ke semua datanya
+  - ditentukan berapa k tetangga terdekat (data terdekat)
+  - dilakukan majority voting dari kelas k tetangga terdekatnya
+2. Optimum k = ...
+3. Workflow: layaknya workflow klasifikasi dengan tambahan,
+  - EDA: ...
+  - Data pre-processing: ...
+4. Masing-masing model memiliki karakteristik, keunggulan dan limitasi masing-masing. Gunakan yang menjawab kebutuhan kita.
+
+
+
+
+
+
+
+

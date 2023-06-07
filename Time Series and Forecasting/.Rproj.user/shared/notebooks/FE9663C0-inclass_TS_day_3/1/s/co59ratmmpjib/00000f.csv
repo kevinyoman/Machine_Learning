@@ -1,0 +1,6 @@
+"0","# your code
+model_gas <- HoltWinters(gas_train)
+"
+"2","Error in decompose(ts(x[1L:wind], start = start(x), frequency = f), seasonal) : 
+  time series has no or less than 2 periods
+"

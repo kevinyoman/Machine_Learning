@@ -1,0 +1,4 @@
+"0","# untuk menambahkan batas atas-bawah"
+"0","pred_all_interval <- predict(model_ineq_all, crime, interval=""prediction"")"
+"0","pred_forward_interval <- predict(model_forward, crime, interval=""prediction"")"
+"0","pred_backward_interval <- predict(model_backward, crime, interval=""prediction"")"

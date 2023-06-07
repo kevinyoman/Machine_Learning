@@ -1,0 +1,3 @@
+"0","# your code here"
+"0","test_assault <- tail(assault_ts, 365)"
+"0","train_assault <- head(assault_ts, length(assault_ts)-365)"

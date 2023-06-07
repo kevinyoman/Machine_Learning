@@ -1,0 +1,8 @@
+"0","library(caret)"
+"0","set.seed(100)"
+"0","# your code here"
+"0","data_train_down <- downSample(x=data_train %>% select(-default),"
+"0","                              y=data_train$default,"
+"0","                              yname=""default"")"
+"0",""
+"0",""

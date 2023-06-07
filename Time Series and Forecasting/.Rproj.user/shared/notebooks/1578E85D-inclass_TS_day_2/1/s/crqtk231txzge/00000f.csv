@@ -1,0 +1,4 @@
+"0","# Detrend time series"
+"0","birth_seas_er <- birth_ts - birth_trend"
+"0",""
+"0","autoplot(birth_seas_er)"

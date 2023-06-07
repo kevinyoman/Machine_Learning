@@ -1,0 +1,5 @@
+"0","# get function & data"
+"0","source(""R/biplot.R"")"
+"0",""
+"0","data(""USArrests"")"
+"0","head(USArrests)"

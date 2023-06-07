@@ -1,0 +1,3 @@
+"0",""
+"0","# korelasi setelah PCA"
+"0","ggcorr(pc_keep, label = T)"

@@ -1,0 +1,4 @@
+"0","birth_trend <- ma(birth_ts, order = 12, # sesuai frequency"
+"0","                  centre = T) # agar dihitung menggunakan center moving average"
+"0"," "
+"0","birth_trend %>% autoplot() + theme_minimal()"

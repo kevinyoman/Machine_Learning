@@ -1,0 +1,8 @@
+"0","ifelse(predict_result[,1] > 0.8, yes = 'No',no = 'Yes')
+"
+"1","   No "
+"1","
+"
+"1","""Yes"" "
+"1","
+"

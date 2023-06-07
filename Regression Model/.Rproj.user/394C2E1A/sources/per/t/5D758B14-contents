@@ -1,0 +1,527 @@
+---
+title: 'RM : In-class Materials'
+author: "Team Algoritma"
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+output:
+  html_document:
+    df_print: paged
+    highlight: breezedark
+    theme: cosmo
+    toc: yes
+    toc_float:
+      collapsed: true
+---
+
+```{r setup, include=FALSE}
+# clear-up the environment
+rm(list = ls())
+
+# chunk options
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  comment = "#>"
+)
+
+options(scipen = 123)
+```
+
+# Introduction: Machine Learning
+
+Tujuan dari machine learning adalah membuat **mesin yang dapat belajar sendiri** dalam memahami pola data hingga mengestimasi apa yang akan terjadi di masa depan.
+
+# Supervised vs Unsupervised Learning
+
+1. Supervised Learning: memiliki target variabel
+
+   * Regression: target variabelnya **numerik**
+
+   * Classification: target variabelnya **kategorik**
+
+2. Unsupervised Learning: tidak memiliki target variabel
+
+   * Clustering
+
+   * Dimensionality Reduction
+
+**Knowledge Check**
+
+Dalam business case di lapangan, pemilihan variabel target biasanya dikaitkan dengan masalah bisnis yang ingin diselesaikan:
+
+Kasus 1:
+
+>Sebuah agen properti berusaha membangun sebuah model untuk menebak harga sebuah properti untuk digunakan sebagai acuan kontrol untuk menjaga harga pasar. Untuk itu, mereka mengembangkan sebuah model dengan:
+
+- Variabel target: harga properi
+- Variabel prediktor: luas properti, umum property, lokasi properti, model properti
+
+Kasus 2:
+
+>Seorang pemilik restoran ingin menebak berapa banyak penjualan yang akan dihasilkan oleh restorannya. Untuk itu mereka mengembangkan sebuah model dengan kriteria:
+
+Variabel target: jumlah penjualan
+Variabel prediktor: promosi, menu makanan, tempat/lokasi, wifi, fasilitas, weekend/weekday.
+
+# Linear Regression
+
+Mari memahami dasar dari linear regression yaitu **ordinary least squares** dengan studi kasus:
+
+```{r}
+# read data copiers
+copiers <- read.csv("data_input/copiers.csv")
+```
+
+Copiers adalah data online retailer yang menjual mesin potokopi.
+
+```{r}
+# inspect data
+str(copiers)
+```
+
+BQ: Misalkan kita ingin memprediksi profit berdasarkan nilai sales. Tentukan:
+
+* variable target (y): Profit
+* variable prediktor (x): sales
+
+**Eksplorasi data**:
+
+**1. Cek persebaran data**
+
+Cek persebaran variable Profit:
+
+```{r}
+boxplot(copiers$Profit)
+```
+
+Insight: 
+- outlier -> ada -> bisa memengaruhi
+- distribusi -> rendah, berkisar antara 200-800 an
+
+Cek persebaran variable Sales:
+
+```{r}
+boxplot(copiers$Sales)
+```
+
+Insight: 
+- distribusi: rendah, berkisar antara 800 - 1900an
+- outlier:ada
+
+**Korelasi antar variable target dan prediktor**
+
+
+```{r}
+# nilai korelasi
+cor(copiers$Sales, copiers$Profit)
+```
+
+> Korelasi antara Profit dan Sales kuat positif.
+
+```{r}
+# visualisasi scatter plot
+plot(copiers$Sales, copiers$Profit)
+```
+
+> Indikasi bahwa sales adalah **prediktor yang baik** untuk memprediksi Profit.
+
+## Simple Linear Regression
+
+**Model tanpa variable prediktor:**
+
+`lm(y ~ x, data)`
+
+```{r}
+# buat model
+model_base <- lm(formula = Profit ~ 1, data = copiers) # 1 menandakan tanpa prediktor
+
+# print summary model
+summary(model_base)
+```
+
+Coefficient intercept model tanpa prediktor adalah mean dari target variable:
+
+```{r}
+mean(copiers$Profit)
+```
+
+```{r}
+plot(copiers$Profit)
+abline(h = mean(copiers$Profit), col = "red")
+```
+
+
+**Model dengan variable prediktor:**
+
+```{r}
+# buat model
+model_ols <- lm(formula = Profit ~ Sales, data = copiers)
+
+# summary model
+summary(model_ols)
+```
+
+Dihasilkan **koefisien intercept** dan **koefisien untuk setiap prediktor**, sehingga formula model regresi:
+
+$$\hat{y}=\beta_0+\beta_1.x_1+...+\beta_n.x_n$$. 
+
+dimana, $\beta_0$ adalah intercept, $\beta_1, ..., \beta_n$ adalah coefficient prediktor, dan $x_1,...,x_n$ merupakan variable prediktor yang digunakan.
+
+Sehingga formula model yang diperoleh:
+
+$$Profit = -114.0625 + 0.4229*{Sales}$$
+
+Ketika kita memiliki Sales bernilai 1000, berapa jumlah Profit yang didapatkan?
+
+```{r}
+-114.0625 + (0.4229*1000)
+```
+
+Bila garis regresi diplot kan maka menghasilkan sebagai berikut:
+
+```{r}
+plot(copiers$Sales, copiers$Profit)
+abline(model_ols, col = "red")
+```
+
+* intercept: titik dimana garis bersinggungan dengan sumbu y
+* coefficient prediktor: slope/kemiringan garis
+
+**Important Points**:
+
+* Pada linear regression, prediktor yang baik adalah yang memiliki korelasi kuat dengan target.
+* Model Linear Regression membuat suatu garis lurus yang menangkap pola data sehingga menghasilkan error terkecill.
+* Formula garis regresi dapat digunakan untuk prediksi.
+
+## Ordinary Least Squares (Concept)
+
+Ordinary least squares bekerja dengan **mencari suatu garis lurus yang dapat merepresentasikan pola data**, dalam kata lain menghasilkan error terkecil. Error yang dimaksud adalah **Sum of Squared Error (SSE)** 
+
+* Error: selisih dari nilai prediksi ($\hat{y}$) dengan nilai actual ($y$)
+
+$$error = y - \hat{y}$$
+
+* Sum of Squared Error (SSE): 
+
+$$\sum^n_{i=1}(y_i - \hat{y}_i)^2$$
+Penjelasan formula:
+
+1. **Error** dihitung untuk masing-masing data
+2. **Dikuadratkan** agar nilai error positif dan error negatif tidak saling menghilangkan
+3. **Dijumlahkan** untuk mendapatkan suatu nilai yang merepresentasikan error keseluruhan data
+
+```{r, out.width = "100%", echo = FALSE, fig.align = "center"}
+knitr::include_graphics("image/ols.gif")
+```
+
+**Summary Day 1**
+
+**Workflow Regression**:
+
+* business question: ketahui target & prediktor
+* read data + cleaning data
+* eda: 
+  + cek outlier: ada/tidak. bisa dicek nanti, bila menurunkan performa model dibuang saja.
+  + cek korelasi target - prediktor: cari prediktor potensial
+* modelling: `model <- lm(target ~ prediktor, data)`
+* interpretasi model: `summary(model)` -> dibahas di day 2
+
+---
+**START OF DAY 2**
+
+## Interpretasi Model
+
+Model Machine Learning memiliki beberapa sifat,
+  + robustness: performa model yang tinggi, errornya rendah 
+  + interpretability: bisa tau pengaruh tiap prediktor (meningkatkan/menurunkan target)
+
+Umumnya: 
+  + model sederhana: interpretability tinggi, robustness rendah
+  + model kompleks: interpretability rendah, robustness tinggi
+
+> Salah satu keunggulan model linear regression adalah interpretability.
+
+```{r}
+summary(model_ols)
+
+```
+```{r}
+tes <- lm(Profit~Discount,data=copiers)
+summary(tes)
+```
+
+
+> Profit = -114.06251 + 0.42286 * Sales
+
+1. **Intercept**: titik awal garis regresi terbentuk, menunjukkan nilai target ketika nilai prediktor = 0
+   
+   >  Saat Sales 0, profit = ... 
+  
+2. **Coefficient/Slope**: kenaikan variable target setiap 1 satuan
+  + Koefisien positif = korelasi positif, meningkatkan nilai variable target
+  + Koefisien negatif = korelasi negatif, menurunkan nilai variable target
+  
+  > Sales (menaikkan/menurunkan?) Profit
+  
+3. **Signifikansi prediktor**: mengetahui apakah setiap prediktor berpengaruh signifikan terhadap variable targetnya.
+  + Sebuah prediktor dikatakan signifikan ketika p-value < 0.05 (alpha)
+  + Bisa juga dilihat dari jumlah bintang setiap prediktor
+  
+  > Variable yg signifikan: ...
+  
+4. **R-squared**: ukuran **kebaikan model**. Seberapa baik model dapat menjelaskan target. 
+  + rentang nilai 0-1, mendekati 1 semakin baik
+  
+  > Prediktor yg kita gunakan pada model bisa menjelaskan sebanyak .... variansi dari target variable, sedangkan sisanya dijelaskan oleh variable lain di luar model.
+
+## Prediksi
+
+Prediksi nilai profit misalkan kita punya data sales sebagai berikut:
+
+```{r}
+sales <- data.frame(Sales = c(300,290,320,450))
+# library(skimr)
+
+sales
+```
+
+Agar bisa menghitung langsung semuanya, gunakan function `predict()`:
+
+```{r}
+predict(object = model_ols, newdata = sales)
+```
+
+Kesimpulan: fungsi `predict()` prediksi ini untuk memprediksi data baru berdasarkan model yang dibuat berdasarkan data yg lama (belajar dari data historis)
+
+# Leverage vs Influence
+
+**Outlier** adalah data yang nilainya jauh dari kebanyakan data lainnya, dan umumnya mengganggu pemodelan. 
+
+Outlier dimana nilai sumbu x nya jauh dari kebanyakan data disebut **high leverage**. Outlier berpotensi untuk sangat mempengaruhi koefisien (intercept, slope) dan r-squared dari model regresi (**high influence**). Untuk membuktikannya kita perlu melihat summary model.
+
+* leverage mempengaruhi model: high influence
+* leverage tidak mempengaruhi model: low influence
+
+Practical Notes:
+1. Buat model dengan outlier (data awal) -> cek performa model
+2. Kalau performa masih buruk -> cek ada outlier/tidak
+3. Kalau ada outlier, coba dibuang -> buat model tanpa outlier
+4. Cek performa model lagi
+   + bila outlier tidak merubah/meningkatkan R-squared, sebaiknya dipertahankan. 
+   + bila outlier menurunkan R-squared, sebaiknya dibuang.
+
+Sejauh ini, kita sudah membuat `model_ols` yang menggunakan seluruh observasi. Lakukan exploratory data dengan melihat apakah terdapat outlier pada variable `Sales`:
+
+```{r}
+# boxplot sales
+boxplot(copiers$Sales)
+```
+
+```{r}
+# plot target dan prediktor
+plot(copiers$Sales, copiers$Profit)
+abline(model_ols, col = "red")
+```
+
+Coba buang data outlier:
+
+```{r}
+# versi base
+copiers_new <- copiers[copiers$Sales < 4000,]
+
+# versi dplyr
+library(dplyr)
+copiers_new <- copiers %>% 
+            filter(Sales < 4000)
+```
+
+Buatlah model linear regression dengan data tanpa outlier:
+
+```{r}
+model_no_outlier <- lm(Profit ~ Sales, copiers_new)
+```
+
+Bandingkan **garis regresi** yang dibentuk dari `model_ols` dan `model_no_outlier`, apakah data outlier menghasilkan output yang jauh berbeda?
+
+```{r}
+plot(copiers$Sales, copiers$Profit)
+abline(model_ols, col = "red")
+abline(model_no_outlier, col = "green")
+```
+
+**Insight**: ...
+
+Mari pastikan pula perbandingan nilai goodness of fit (**R-squared**) nya:
+
+```{r}
+summary(model_ols)$r.squared
+summary(model_no_outlier)$r.squared
+```
+
+**Insight**: ...
+
+**Knowledge Check**
+
+Terdapat data dengan high leverage. Setelah dicoba pembuatan model dengan dan tanpa outlier, ternyata data tersebut HIGH INFLUENCE. Maka yang dilakukan ...
+
+- [ ] Menggunakan model dengan outlier
+- [X] Menggunakan model tanpa outlier
+
+---
+
+# Multiple Linear Regression
+
+Penggunaan lebih dari 1 prediktor dapat meningkatkan performa model karena lebih banyak informasi yang dapat menjelaskan target.
+
+Pemilihan prediktor (**feature selection**):
+
+* berdasarkan bisnis
+* berdasarkan statistik:
+  + correlation
+  + stepwise regression (dipelajari hari ke-3)
+
+1. Dataset
+
+```{r}
+head(copiers)
+```
+
+Penentuan variable:
+
+* target: profit
+* prediktor (berdasarkan business): ...
+
+2. Data Wrangling:
+
+```{r}
+# seleksi dan ubah tipe data
+copiers <- copiers %>% 
+  select(Ship.Mode, Segment, Sales, Quantity, Discount, Profit) %>% 
+  mutate(Ship.Mode = as.factor(Ship.Mode),
+         Segment = as.factor(Segment))
+
+# cek missing value = tidak ada
+anyNA(copiers)
+
+# cek data
+head(copiers)
+```
+
+3. Eksplorasi data (*Exploratory Data Analysis*)
+
+Contoh untuk cek outlier sudah dilakukan di hari pertama, dan dapat dilakukan untuk seluruh variable numerik lainnya. Namun untuk saat ini kita gunakan terlebih dahulu outlier yang ada.
+
+**Cek korelasi** prediktor - target:
+
+```{r}
+# cara manual
+cor(copiers$Profit, copiers$Sales)
+cor(copiers$Profit, copiers$Quantity)
+cor(copiers$Profit, copiers$Discount)
+```
+
+```{r}
+# cara 2: menggunakan fungsi `ggcorr()`
+library(GGally)
+ggcorr(copiers, label = T)
+```
+
+**Insight**:
+
+4. Modelling
+
+Bentuk model menggunakan seluruh variable prediktor:
+
+```{r}
+# buat model
+model_ols_multi <- lm(Profit~ ., copiers)
+
+# summary model
+summary(model_ols_multi)
+```
+
+**Insight**:
+
+* interpretasi prediktor (numerik):
+  - meningkatkan profit: ...
+  - menurunkan profit: ...
+  
+* interpretasi prediktor (kategorik):
+  - setiap nilai dari kolom kategorik akan dijadikan 1 entitias (dummy variable)
+  - akan ada 1 nilai yang menjadi basis (di intercept), tidak ditampilkan koefisiennya
+  - cara interpretasi: 
+    + Segmen = Corporate, maka target ...
+    + Segmen = Home Office maka target ...
+    + Segmen = Consumer, maka target tidak ditambah/dikurang (mengikuti intercept)
+  
+* signifikansi prediktor:
+
+* adj. r-squared: 
+
+Note: 
+
+* kalau simple linear regression pkai *multiple r squared*
+* kalau multiple linear regression pkai *adj. r. squared*
+  + semakin banyak prediktor maka R-squared otomatis meningkat
+  + adjusted R-squared menghitung R-squared sambil memperhitungkan/melakukan penalty untuk jumlah prediktor yang digunakan. Adj. R-squared hanya akan meningkat bila prediktor memang menghasilkan prediksi yang lebih baik, bukan hanya menambahkan informasi random.
+  
+Karena terdapat variable tidak signifikan, mari coba gunakan variable yang signifikan saja:
+
+```{r}
+# your code
+model_ols_multi2 <- 
+
+# summary model
+```
+
+Insight: adj. r-squared adalah ...
+
+# Prediksi 
+
+Di materi ini kita belum ada data baru. Kita akan gunakan model untuk memprediksi data copiers (yg kita gunakan untuk pemodelan).
+
+Kita akan gunakan model yang telah dibuat:
+
+* model_ols: 1 prediktor (Sales)
+* model_ols_multi: Semua prediktor
+* model_ols_multi2: Prediktor signifikan (Sales + Discount)
+
+```{r}
+# simpan hasil prediksi ke kolom baru `prediction` di data `copiers_multi`
+pred_ols <- predict(model_ols, newdata = copiers)
+pred_ols_multi <- 
+pred_ols_multi2 <-
+  
+```
+
+Kita akan bandingkan dari ketiga model, manakah yang memiliki performa terbaik melalui evaluasi model!
+
+**Summary Day 2:**
+
+* Interpretasi model: `summary(model)`
+  + koefisien prediktor: positif/negatif -> meningkatkan/menurunkan target
+  + prediktor signifikan: lihat dari p-value/jumlah bintang
+  + r-squared: 
+    + nilai kebaikan model dalam menjelaskan target
+    + rentang 0-1: mendekati 1 semakin baik
+
+* Leverage: outliers pada prediktor 
+  + Leverage dapat memengaruhi model secara signifikan     
+  + Leverage tetap dimasukkan ke dalam model apabila berpengaruh baik pada model
+
+* Multiple linear regression: prediktor > 1
+  + r.squared:
+    - utk multiple linear regression gunakan adj.r.squared
+    - utk simple linear regression gunakan multiple r.squared
+
+* Prediksi: `predict(model, newdata)`  
+
+
+    
+    
+    
+    
+    
+    
+    
+    

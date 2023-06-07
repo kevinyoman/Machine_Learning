@@ -1,0 +1,3 @@
+"0","# melihat variance yang dirangkum tiap PC"
+"0","# fungsi prcomp() akan dijelaskan saat masuk pada proses PCA"
+"0","plot(prcomp(ppt))"

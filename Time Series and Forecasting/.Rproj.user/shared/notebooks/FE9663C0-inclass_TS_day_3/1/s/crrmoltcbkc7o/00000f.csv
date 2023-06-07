@@ -1,0 +1,3 @@
+"0","# menyesuaikan tipe data `date`"
+"0","birth <- birth %>% "
+"0","  mutate(date = ymd(date))"

@@ -1,0 +1,4 @@
+"0","dine <- read.csv(""data_input/dineout.csv"","
+"0","                 sep = "";"","
+"0","                 stringsAsFactors = T)"
+"0","dine"

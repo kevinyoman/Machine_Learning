@@ -1,0 +1,5 @@
+"0","library(partykit)"
+"0","set.seed(100)"
+"0","# your code here"
+"0","model_dt <- ctree(default~.,data_train_down,"
+"0","                  control = ctree_control(mincriterion=0.9))"

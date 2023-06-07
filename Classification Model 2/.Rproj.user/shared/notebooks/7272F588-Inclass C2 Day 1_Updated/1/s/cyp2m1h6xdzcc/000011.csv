@@ -1,0 +1,6 @@
+"0","# Please run the code down below"
+"0","transformer <- content_transformer(FUN = function(x, pattern){"
+"0","  gsub(x = x, "
+"0","       pattern = pattern, "
+"0","       replacement = "" "") "
+"0","})"

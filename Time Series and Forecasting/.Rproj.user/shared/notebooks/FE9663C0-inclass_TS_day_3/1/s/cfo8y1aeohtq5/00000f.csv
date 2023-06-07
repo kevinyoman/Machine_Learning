@@ -1,0 +1,8 @@
+"0","birth %>% "
+"0","  arrange() %>% # memastikan data terurut"
+"0","  pad(""month"") %>% # memastikan tidak ada data yg terlewati"
+"0","  anyNA() # cek adakah missing value"
+"1","[1]"
+"1"," FALSE"
+"1","
+"

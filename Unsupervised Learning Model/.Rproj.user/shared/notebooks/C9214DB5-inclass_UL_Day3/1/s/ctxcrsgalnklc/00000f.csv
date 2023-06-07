@@ -1,0 +1,5 @@
+"0","#install.packages(""factoextra"")"
+"0","library(factoextra)"
+"0","fviz_contrib(X = ppt_100_pca, # model PCA"
+"0","             axes = 2, # PC yang ingin dilihat (2 = PC2)"
+"0","             choice = ""var"") # ""var"" = merujuk kepada yang ingin ditampilkan adalah variabel"

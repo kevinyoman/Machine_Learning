@@ -1,0 +1,4 @@
+"0","# menggunakan AirPassenger"
+"0","air_dc <- decompose(AirPassengers)"
+"0",""
+"0","decompose(AirPassengers, type = ""multiplicative"") %>% autoplot()"

@@ -1,0 +1,2 @@
+"0","rain_ts <- ts(data = rain, freq = 1)"
+"0","  "

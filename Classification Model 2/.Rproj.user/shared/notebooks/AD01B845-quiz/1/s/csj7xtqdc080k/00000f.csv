@@ -1,0 +1,12 @@
+"0","# your code here"
+"0","auc <- performance(prediction.obj = pred_roc, "
+"0","                       measure = 'auc')"
+"0","auc@y.values"
+"1","[[1]]
+"
+"1","[1]"
+"1"," 0.9511001"
+"1","
+"
+"1","
+"

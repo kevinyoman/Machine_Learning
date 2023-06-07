@@ -1,0 +1,14 @@
+"0","# Please type your code down below
+predict(model_naive, newdata=diva, type='class')
+"
+"1","[1]"
+"1"," No"
+"1","
+"
+"1",""
+"1","Levels: "
+"1",""
+"1","No Yes"
+"1",""
+"1","
+"

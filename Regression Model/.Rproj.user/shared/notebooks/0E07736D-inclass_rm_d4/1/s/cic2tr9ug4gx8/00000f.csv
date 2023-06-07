@@ -1,0 +1,5 @@
+"0","# simpan hasil prediksi ke kolom baru `prediction` di data `copiers_multi`"
+"0","pred_ols <- predict(model_ols, newdata = copiers)"
+"0","pred_ols_multi <- predict(model_ols_multi, newdata = copiers)"
+"0","pred_ols_multi2 <- predict(model_ols_multi2, newdata = copiers)"
+"0","  "

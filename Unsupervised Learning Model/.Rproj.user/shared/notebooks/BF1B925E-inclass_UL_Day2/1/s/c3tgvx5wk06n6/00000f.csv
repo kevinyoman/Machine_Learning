@@ -1,0 +1,5 @@
+"0","# indeks kolom numerik (quantitative)"
+"0","quantivar <- c(3:6,8:10,12:14)"
+"0",""
+"0","# indeks kolom kategorik (qualitative)"
+"0","qualivar <- c(1,2,7,11)"

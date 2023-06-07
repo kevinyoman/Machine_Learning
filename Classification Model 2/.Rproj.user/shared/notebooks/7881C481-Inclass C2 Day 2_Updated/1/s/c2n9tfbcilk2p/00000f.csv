@@ -1,0 +1,7 @@
+"0","# label untuk train dan test, tersimpan pada dataframe sms_celan"
+"0",""
+"0","# Label data train"
+"0","label_train <- sms_clean[index, ""v1""]"
+"0",""
+"0","# Label data test"
+"0","label_test <- sms_clean[-index, ""v1""]"

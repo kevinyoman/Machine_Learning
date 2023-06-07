@@ -1,0 +1,2 @@
+"0","# read data copiers"
+"0","copiers <- read.csv(""data_input/copiers.csv"")"
